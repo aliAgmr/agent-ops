@@ -1,0 +1,27 @@
+{
+  "name": "metabase-tools",
+  "displayName": "Metabase tools",
+  "version": "0.1.0",
+  "description": "Metabase MCP server: browse databases and collections, run saved questions and read-only SQL, create or update native questions (the guard keeps SQL read-only).",
+  "author": {
+    "name": "agent-ops contributors"
+  },
+  "dependencies": [
+    "core"
+  ],
+  "userConfig": {
+    "metabase_url": {
+      "type": "string",
+      "title": "Metabase URL",
+      "description": "Base URL of your Metabase, without /api, e.g. https://bi.example.com",
+      "required": true
+    },
+    "metabase_api_key": {
+      "type": "string",
+      "title": "Metabase API key",
+      "description": "Your own Metabase API key (Admin → Settings → Authentication → API keys).",
+      "sensitive": true,
+      "required": true
+    }
+  }
+}

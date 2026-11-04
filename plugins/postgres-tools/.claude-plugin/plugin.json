@@ -1,0 +1,21 @@
+{
+  "name": "postgres-tools",
+  "displayName": "Postgres tools (read-only)",
+  "version": "0.1.0",
+  "description": "Postgres MCP server with a read-only connection: schema, context and SELECT queries. Writes are blocked by the core guard and must be impossible for the user you give it.",
+  "author": {
+    "name": "agent-ops contributors"
+  },
+  "dependencies": [
+    "core"
+  ],
+  "userConfig": {
+    "postgres_ro_url": {
+      "type": "string",
+      "title": "Postgres read-only connection string",
+      "description": "postgresql://<read-only user>:<password>@<host>:5432/<database>. A read-only user only.",
+      "sensitive": true,
+      "required": true
+    }
+  }
+}

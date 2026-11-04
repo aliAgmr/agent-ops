@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Keeps infra/macos/wake.py running: n8n POSTs /wake/<agent> on every task-board webhook and this
+     kickstarts __PREFIX__.agent-<agent> (debounced). Port 8766, token WAKE_TOKEN in the env file.
+     Rendered into ~/Library/LaunchAgents; __X__ are placeholders. -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>__PREFIX__.agent-wake</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>/srv/agent-ops/infra/macos/wake.py</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>AGENT_OPS_ENV</key><string>__HOME__/.config/agent-ops/env</string>
+    <key>PATH</key><string>/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>PYTHONUNBUFFERED</key><string>1</string>
+    <key>AGENT_OPS_LABEL_PREFIX</key><string>__PREFIX__</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>10</integer>
+  <key>StandardOutPath</key><string>__HOME__/Library/Logs/agent-ops/wake/launchd.out</string>
+  <key>StandardErrorPath</key><string>__HOME__/Library/Logs/agent-ops/wake/launchd.err</string>
+</dict>
+</plist>

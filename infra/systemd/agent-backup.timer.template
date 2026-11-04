@@ -1,0 +1,10 @@
+# Rendered by infra/bootstrap.sh into /etc/systemd/system/agent-backup.timer when BACKUP=true.
+[Unit]
+Description=agent-ops nightly backup
+
+[Timer]
+OnCalendar=__ONCALENDAR__
+Unit=agent-backup.service
+
+[Install]
+WantedBy=timers.target

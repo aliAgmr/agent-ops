@@ -1,0 +1,12 @@
+{
+  "name": "role-backend",
+  "displayName": "Role: Backend (and tech lead)",
+  "version": "0.1.0",
+  "description": "Backend workflow, API contracts and their handoff to frontend, the E2E test workflow, turning Figma designs into tasks.",
+  "author": {
+    "name": "agent-ops contributors"
+  },
+  "dependencies": [
+    "core"
+  ]
+}

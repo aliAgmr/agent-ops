@@ -1,0 +1,62 @@
+{
+  "_comment": "Rendered into .mcp.json (git-ignored) by infra/bin/render-mcp.py before every tick: servers whose `requires` variables are empty are left out; `code_hosts` adds one server per routing.yaml code host.",
+  "code_hosts": "release",
+  "mcpServers": {
+    "plane": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "plane-mcp-server==0.3.4",
+        "python",
+        "${AGENT_OPS_ROOT:-/srv/agent-ops}/plugins/core/scripts/plane-mcp-ce.py",
+        "stdio"
+      ],
+      "env": {
+        "PLANE_API_KEY": "${TRACKER_RELEASE_TOKEN}",
+        "PLANE_BASE_URL": "${TRACKER_BASE_URL}",
+        "PLANE_WORKSPACE_SLUG": "${TRACKER_WORKSPACE}"
+      },
+      "requires": [
+        "TRACKER_RELEASE_TOKEN",
+        "TRACKER_BASE_URL"
+      ]
+    },
+    "postgres": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@microsoft/postgres-mcp",
+        "run"
+      ],
+      "env": {
+        "POSTGRES_MCP_CONNECTION_STRING": "${PG_RO_URL}",
+        "POSTGRES_MCP_PROFILE_NAME": "app-ro"
+      },
+      "requires": [
+        "PG_RO_URL"
+      ]
+    },
+    "clickhouse": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--with",
+        "mcp-clickhouse",
+        "--python",
+        "3.10",
+        "mcp-clickhouse"
+      ],
+      "env": {
+        "CLICKHOUSE_HOST": "${CH_RO_HOST}",
+        "CLICKHOUSE_PORT": "${CH_RO_PORT}",
+        "CLICKHOUSE_SECURE": "${CH_RO_SECURE}",
+        "CLICKHOUSE_USER": "${CH_RO_USER}",
+        "CLICKHOUSE_PASSWORD": "${CH_RO_PASSWORD}"
+      },
+      "requires": [
+        "CH_RO_HOST",
+        "CH_RO_PASSWORD"
+      ]
+    }
+  }
+}

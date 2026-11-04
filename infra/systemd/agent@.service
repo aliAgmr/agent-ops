@@ -1,0 +1,20 @@
+[Unit]
+Description=agent-ops %i agent tick
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=agents
+Group=agents
+EnvironmentFile=/etc/agent-ops/env
+Environment=AGENT_OPS_ENV=/etc/agent-ops/env
+Environment=AGENT_OPS_ROOT=/srv/agent-ops
+Environment=AGENT_LOG_ROOT=/var/log/agents
+Environment=PATH=/home/agents/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/srv/agent-ops/infra/bin/run-agent.sh %i
+TimeoutStartSec=40min
+Nice=5
+NoNewPrivileges=true
+ProtectSystem=full
+ReadWritePaths=/var/log/agents /run/lock /srv/agent-ops /srv/repos /srv/nightly /home/agents

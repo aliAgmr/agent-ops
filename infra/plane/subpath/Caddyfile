@@ -1,0 +1,75 @@
+# Plane's proxy config for images built by build.sh (UI under {$PLANE_PREFIX}, e.g. /plane).
+# Mounted over the stock /etc/caddy/Caddyfile by docker-compose.subpath.yaml.
+#
+# A reverse proxy in front (e.g. Traefik or nginx on tools.example.com) strips the prefix and sets
+# X-Forwarded-Prefix, so most requests arrive bare, as Plane expects. Requests that still carry the
+# prefix (opened directly on this host or through a gateway tunnel, e.g. http://192.0.2.10/plane/)
+# get the same treatment here. Root paths stay as in the stock file, so the agents keep using
+# http://<this host>/api/.
+
+(plane_routes) {
+	request_body {
+		max_size {$FILE_SIZE_LIMIT}
+	}
+
+	# space renders on the server with basename {$PLANE_PREFIX}/spaces: give it the prefix back.
+	redir /spaces /spaces/ permanent
+	handle /spaces/* {
+		rewrite * {$PLANE_PREFIX}{uri}
+		reverse_proxy space:3000
+	}
+
+	redir /god-mode /god-mode/ permanent
+	reverse_proxy /god-mode/* admin:3000
+
+	reverse_proxy /live/* live:3000
+	reverse_proxy /api/* api:8000
+	reverse_proxy /auth/* api:8000
+	reverse_proxy /static/* api:8000
+
+	reverse_proxy /{$BUCKET_NAME}/* plane-minio:9000
+	reverse_proxy /{$BUCKET_NAME} plane-minio:9000
+
+	# agent-mcp (infra/agent-mcp) runs on this host, not in Docker: /agent-mcp/mcp → host :8765/mcp,
+	# /agent-mcp/journal → the action journal. Public URL e.g. https://tools.example.com/plane/agent-mcp
+	# (the proxy strips /plane). host.docker.internal reaches the host (Docker Desktop; on Linux via
+	# extra_hosts in docker-compose.subpath.yaml). Auth is the caller's task-board token, checked by
+	# the server itself.
+	handle_path /agent-mcp/* {
+		reverse_proxy host.docker.internal:{$AGENT_MCP_PORT:8765} {
+			flush_interval -1
+		}
+	}
+
+	reverse_proxy /* web:3000
+}
+
+{
+	{$CERT_EMAIL}
+	acme_ca {$CERT_ACME_CA:https://acme-v02.api.letsencrypt.org/directory}
+	{$CERT_ACME_DNS}
+	servers {
+		max_header_size 25MB
+		client_ip_headers X-Forwarded-For X-Real-IP
+		trusted_proxies static {$TRUSTED_PROXIES:0.0.0.0/0}
+	}
+}
+
+{$SITE_ADDRESS} {
+	redir {$PLANE_PREFIX} {$PLANE_PREFIX}/ permanent
+	handle {$PLANE_PREFIX}/* {
+		uri strip_prefix {$PLANE_PREFIX}
+		request_header X-Forwarded-Prefix {$PLANE_PREFIX}
+		import plane_routes
+	}
+	# The UI lives under the prefix now; send browsers there from the bare root. Not when Traefik
+	# already stripped the prefix (it sets X-Forwarded-Prefix): that "/" is the UI itself.
+	@bare_root {
+		path /
+		not header X-Forwarded-Prefix *
+	}
+	redir @bare_root {$PLANE_PREFIX}/ 302
+	handle {
+		import plane_routes
+	}
+}

@@ -1,0 +1,12 @@
+{
+  "name": "role-frontend",
+  "displayName": "Role: Frontend",
+  "version": "0.1.0",
+  "description": "Integrate designs and backend API contracts into the frontend.",
+  "author": {
+    "name": "agent-ops contributors"
+  },
+  "dependencies": [
+    "core"
+  ]
+}

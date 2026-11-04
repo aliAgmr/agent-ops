@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Runs infra/macos/backup.sh every night (BACKUP_AT, default 03:15, host's local time). Rendered
+     into ~/Library/LaunchAgents by install.sh when BACKUP=true; set OFFSITE_DIR to copy backups off
+     this machine (e.g. a mounted share). __X__ are placeholders. -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>__PREFIX__.agent-backup</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/srv/agent-ops/infra/macos/backup.sh</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key><string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin</string>
+    <key>OFFSITE_DIR</key><string>__OFFSITE__</string>
+  </dict>
+  <key>StartCalendarInterval</key>
+  __CALENDAR__
+  <key>StandardOutPath</key><string>__HOME__/Library/Logs/agent-ops/backup/backup.log</string>
+  <key>StandardErrorPath</key><string>__HOME__/Library/Logs/agent-ops/backup/backup.err</string>
+</dict>
+</plist>

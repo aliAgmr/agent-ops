@@ -1,0 +1,12 @@
+# Rendered by infra/bootstrap.sh into /etc/systemd/system/agent-__AGENT__.timer for every entry of
+# AGENTS="name:seconds …" (default triage:300 analyst:600 release:900). __X__ are placeholders.
+[Unit]
+Description=Run the __AGENT__ agent every __INTERVAL__ seconds
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=__INTERVAL__s
+Unit=agent@__AGENT__.service
+
+[Install]
+WantedBy=timers.target

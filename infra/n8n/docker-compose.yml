@@ -1,0 +1,40 @@
+# n8n for task-board (Plane) → Telegram + Mattermost notifications and instant triage. Started by infra/n8n/install.sh, which
+# writes the .env next to the running copy (never in git). Version pinned in ./VERSION.
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:${N8N_VERSION:?set N8N_VERSION}
+    restart: unless-stopped
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+    # host.docker.internal → the host (the wake service on :8766). Docker Desktop has it; Linux needs this.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      N8N_HOST: ${N8N_HOST:?set N8N_HOST}
+      N8N_PORT: "5678"
+      N8N_PROTOCOL: ${N8N_PROTOCOL:-http}
+      WEBHOOK_URL: ${N8N_PROTOCOL:-http}://${N8N_HOST}:${N8N_PORT:-5678}/
+      N8N_EDITOR_BASE_URL: ${N8N_PROTOCOL:-http}://${N8N_HOST}:${N8N_PORT:-5678}/
+      # Plain http inside a private network; turn this back on behind https.
+      N8N_SECURE_COOKIE: ${N8N_SECURE_COOKIE:-false}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?set N8N_ENCRYPTION_KEY}
+      GENERIC_TIMEZONE: ${TZ:-UTC}
+      TZ: ${TZ:-UTC}
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_PERSONALIZATION_ENABLED: "false"
+      N8N_RUNNERS_ENABLED: "true"
+      # The flow reads the Mattermost incoming-webhook URL from here ({{$env.MATTERMOST_WEBHOOK_URL}}),
+      # so the URL stays in ~/n8n-selfhost/.env and out of the exported flow in git. Only the owner
+      # edits workflows, which is what makes env access in nodes acceptable.
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+      MATTERMOST_WEBHOOK_URL: ${MATTERMOST_WEBHOOK_URL:-}
+      # "Wake triage" node → the wake service on the host (infra/macos/wake.py, http://host.docker.internal:8766).
+      WAKE_TOKEN: ${WAKE_TOKEN:-}
+      # Private messages ("Flush DMs" reads each changed task's activity from Plane's API with this
+      # read token; a copy of TRACKER_TRIAGE_TOKEN). MM_DM_ENABLED=true also sends them as Mattermost DMs.
+      PLANE_NOTIFY_TOKEN: ${PLANE_NOTIFY_TOKEN:-}
+      MM_DM_ENABLED: ${MM_DM_ENABLED:-false}
+    volumes:
+      - n8n_data:/home/node/.n8n
+volumes:
+  n8n_data:

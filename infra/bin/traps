@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Data-trap checks (infra/quality/traps.py; the checks: plugins/core/skills/data-traps/checks.yaml).
+#   traps list | traps run [--ids a,b] [--tables analytics.orders] | traps for-files <changed paths>
+exec uv run -q --no-project --with pyyaml==6.0.2 python -I "$(cd "$(dirname "$0")" && pwd)/../quality/traps.py" "$@"

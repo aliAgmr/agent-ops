@@ -1,0 +1,27 @@
+{
+  "name": "jenkins-tools",
+  "displayName": "Jenkins tools",
+  "version": "0.1.0",
+  "description": "Jenkins MCP (the Jenkins MCP Server plugin) through mcp-remote: jobs, builds, logs. Running builds is blocked by the core guard, except non-production jobs for the devops role.",
+  "author": {
+    "name": "agent-ops contributors"
+  },
+  "dependencies": [
+    "core"
+  ],
+  "userConfig": {
+    "jenkins_mcp_url": {
+      "type": "string",
+      "title": "Jenkins MCP URL",
+      "description": "The Jenkins MCP Server plugin endpoint, e.g. https://ci.example.com/mcp-server/mcp",
+      "required": true
+    },
+    "jenkins_auth": {
+      "type": "string",
+      "title": "Jenkins Authorization header",
+      "description": "Basic <base64 user:apitoken>. Use a user WITHOUT build permission (devops: build rights on non-production jobs only).",
+      "sensitive": true,
+      "required": true
+    }
+  }
+}

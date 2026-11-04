@@ -1,0 +1,28 @@
+# Rendered by infra/bootstrap.sh (AGENT_MCP=true); __X__ are placeholders.
+# The project Q&A + action journal server (infra/agent-mcp/server.py) for teammates' agents. A
+# reverse proxy forwards /agent-mcp/* (AGENT_MCP_PUBLIC_URL) to it. Listens on AGENT_MCP_HOST
+# (default 127.0.0.1; set it to the Docker bridge address if the proxy runs in Docker, and firewall it).
+[Unit]
+Description=agent-ops agent-mcp server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=agents
+Group=agents
+EnvironmentFile=/etc/agent-ops/env
+Environment=AGENT_OPS_ENV=/etc/agent-ops/env
+Environment=AGENT_OPS_ROOT=/srv/agent-ops
+Environment=AGENT_MCP_PROFILE_DIR=/srv/agent-ops/service/agent-mcp
+Environment=AGENT_MCP_PROJECTS=/srv/agent-ops/projects.yaml
+Environment=AGENT_MCP_HOST=__AGENT_MCP_HOST__
+Environment=AGENT_MCP_PORT=8765
+Environment=MCP_TIMEOUT=120000
+Environment=PATH=/home/agents/.local/bin:/usr/local/bin:/usr/bin:/bin
+WorkingDirectory=/srv/agent-ops/infra/agent-mcp
+ExecStart=__UV__ run --quiet --script /srv/agent-ops/infra/agent-mcp/server.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

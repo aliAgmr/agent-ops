@@ -1,0 +1,55 @@
+# What the lineage scanner (infra/lineage/lineage.py) can't read from code: metric names, page
+# names and owners. Everything else (tables → views → API routes → pages) is scanned from the
+# repos and the warehouse catalog. `infra/bin/lineage check` (nightly) reports any name here that
+# no longer exists. Keep values on one line: `key: value` or `key: [a, b]`.
+#
+# This is an EXAMPLE for the sample "Acme Billing" app; SETUP.md writes yours.
+#
+# metrics: id, name, from (tables/views it is computed from), shown_on (page paths), owner
+# pages:   path (as in the frontend's router), name, owner
+# owners:  match (glob over the node name), owner (a people.yaml key)
+
+metrics:
+  - id: mrr
+    name: Monthly recurring revenue
+    from: [analytics.v_revenue_daily, analytics.subscriptions_daily]
+    shown_on: [/revenue]
+    owner: kenji
+  - id: overdue
+    name: Overdue receivables
+    from: [analytics.v_open_invoices, analytics.payments_ledger]
+    shown_on: [/invoices, /revenue]
+    owner: kenji
+  - id: dso
+    name: Days sales outstanding
+    from: [analytics.v_open_invoices, analytics.invoices_daily]
+    shown_on: [/revenue]
+    owner: kenji
+
+pages:
+  - path: /revenue
+    name: Revenue dashboard
+  - path: /invoices
+    name: Invoices
+  - path: /invoices/:invoiceId
+    name: Invoice detail
+  - path: /customers
+    name: Customers
+
+owners:
+  - match: "/*"
+    owner: noor
+  - match: "analytics.*"
+    owner: kenji
+  - match: "raw.*"
+    owner: kenji
+  - match: "GET /*"
+    owner: alex
+  - match: "POST /*"
+    owner: alex
+  - match: "PUT /*"
+    owner: alex
+  - match: "PATCH /*"
+    owner: alex
+  - match: "DELETE /*"
+    owner: alex

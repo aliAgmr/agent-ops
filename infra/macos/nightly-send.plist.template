@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Sends the nightly messages (infra/bin/nightly-send.sh), after quiet hours. Times are the host's
+     local time; install.sh fills __CALENDAR__ from NIGHTLY_SEND_AT / NIGHTLY_SEND_DAYS. -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>__PREFIX__.nightly-send</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/srv/agent-ops/infra/bin/nightly-send.sh</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>AGENT_OPS_ENV</key><string>__HOME__/.config/agent-ops/env</string>
+    <key>AGENT_OPS_ROOT</key><string>/srv/agent-ops</string>
+    <key>PATH</key><string>__HOME__/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+  <key>StartCalendarInterval</key>
+  <array>__CALENDAR__</array>
+  <key>StandardOutPath</key><string>__HOME__/Library/Logs/agent-ops/nightly/nightly-send.out</string>
+  <key>StandardErrorPath</key><string>__HOME__/Library/Logs/agent-ops/nightly/nightly-send.err</string>
+</dict>
+</plist>

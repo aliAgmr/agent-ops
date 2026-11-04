@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Keeps the agent-mcp server (infra/agent-mcp/server.py) running on 127.0.0.1:8765.
+     A reverse proxy forwards /agent-mcp/* to it (e.g. the Caddy in front of the task board:
+     infra/plane/subpath/Caddyfile). Rendered by infra/macos/install.sh (AGENT_MCP=true) into ~/Library/LaunchAgents/<prefix>.agent-mcp.plist;
+     __X__ are placeholders. On Linux: infra/systemd/agent-mcp.service. -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>__PREFIX__.agent-mcp</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/uv</string>
+    <string>run</string>
+    <string>--quiet</string>
+    <string>--script</string>
+    <string>/srv/agent-ops/infra/agent-mcp/server.py</string>
+  </array>
+  <key>WorkingDirectory</key><string>/srv/agent-ops/infra/agent-mcp</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>AGENT_OPS_ENV</key><string>__HOME__/.config/agent-ops/env</string>
+    <key>AGENT_OPS_ROOT</key><string>/srv/agent-ops</string>
+    <key>AGENT_MCP_PROFILE_DIR</key><string>/srv/agent-ops/service/agent-mcp</string>
+    <key>AGENT_MCP_PROJECTS</key><string>/srv/agent-ops/projects.yaml</string>
+    <key>AGENT_MCP_HOST</key><string>127.0.0.1</string>
+    <key>AGENT_MCP_PORT</key><string>8765</string>
+    <key>MCP_TIMEOUT</key><string>120000</string>
+    <key>PATH</key><string>__HOME__/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>10</integer>
+  <key>StandardOutPath</key><string>__HOME__/Library/Logs/agent-ops/agent-mcp/launchd.out</string>
+  <key>StandardErrorPath</key><string>__HOME__/Library/Logs/agent-ops/agent-mcp/launchd.err</string>
+</dict>
+</plist>

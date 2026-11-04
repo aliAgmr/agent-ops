@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint and leak check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq jq
+      - run: bash tools/lint.sh
+
+  plugins:
+    name: Validate plugins
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install -g --no-fund --no-audit @anthropic-ai/claude-code
+      - run: claude plugin validate .
+      - run: for d in plugins/*/; do claude plugin validate "$d"; done
+
+  test:
+    name: Tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Tools
+        run: |
+          if command -v apt-get >/dev/null; then sudo apt-get update -qq && sudo apt-get install -y -qq jq; else brew list jq >/dev/null 2>&1 || brew install jq; fi
+          python3 -m pip install --quiet pyyaml
+      - run: bash tools/run-tests.sh
+
+  clients-windows:
+    name: Client installer (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Client tests
+        shell: bash
+        run: uv run -q --project clients python tests/clients.test.py

@@ -1,0 +1,12 @@
+# Nightly backup of the task board (Plane), n8n and the agents' config (infra/macos/backup.sh,
+# portable). Timer: agent-backup.timer.template (BACKUP=true, BACKUP_ONCALENDAR).
+[Unit]
+Description=agent-ops backup
+After=docker.service
+
+[Service]
+Type=oneshot
+User=agents
+Group=agents
+EnvironmentFile=-/etc/agent-ops/backup.env
+ExecStart=/bin/bash /srv/agent-ops/infra/macos/backup.sh

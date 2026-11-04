@@ -1,0 +1,81 @@
+{
+  "name": "agent-ops",
+  "owner": {
+    "name": "agent-ops contributors"
+  },
+  "metadata": {
+    "description": "Rules, skills, safety guard, action journal and MCP configs for every role on a software team. One source of truth for all your team's AI agents."
+  },
+  "plugins": [
+    {
+      "name": "core",
+      "source": "./plugins/core",
+      "description": "Everyone installs this: task protocol, handoffs, scope rules, the safety guard and action journal, the task board MCP and agent-mcp."
+    },
+    {
+      "name": "gitlab-tools",
+      "source": "./plugins/gitlab-tools",
+      "description": "GitLab MCP server, when your code lives on GitLab."
+    },
+    {
+      "name": "github-tools",
+      "source": "./plugins/github-tools",
+      "description": "GitHub's MCP server, when your code lives on GitHub."
+    },
+    {
+      "name": "postgres-tools",
+      "source": "./plugins/postgres-tools",
+      "description": "Read-only Postgres MCP server."
+    },
+    {
+      "name": "clickhouse-tools",
+      "source": "./plugins/clickhouse-tools",
+      "description": "Read-only ClickHouse MCP server."
+    },
+    {
+      "name": "metabase-tools",
+      "source": "./plugins/metabase-tools",
+      "description": "Metabase MCP server (read, saved questions)."
+    },
+    {
+      "name": "jenkins-tools",
+      "source": "./plugins/jenkins-tools",
+      "description": "Jenkins MCP server (read; devops may run non-production jobs)."
+    },
+    {
+      "name": "figma-tools",
+      "source": "./plugins/figma-tools",
+      "description": "Figma's hosted MCP server (read designs)."
+    },
+    {
+      "name": "role-product",
+      "source": "./plugins/role-product",
+      "description": "Write well-formed tasks, prioritise the board, review what triage sorted, approve reviews and answer product questions."
+    },
+    {
+      "name": "role-design",
+      "source": "./plugins/role-design",
+      "description": "Figma design handoffs to backend and frontend, and design change requests."
+    },
+    {
+      "name": "role-backend",
+      "source": "./plugins/role-backend",
+      "description": "Backend workflow, API contracts and their handoff to frontend, the E2E test workflow, turning Figma designs into tasks."
+    },
+    {
+      "name": "role-frontend",
+      "source": "./plugins/role-frontend",
+      "description": "Integrate designs and backend API contracts into the frontend."
+    },
+    {
+      "name": "role-data",
+      "source": "./plugins/role-data",
+      "description": "Deliver the data the product needs: warehouse queries, tables and views, BI questions and data jobs, written as files and merge requests and applied by a person."
+    },
+    {
+      "name": "role-devops",
+      "source": "./plugins/role-devops",
+      "description": "CI/CD pipelines, deployment setup, servers and containers, monitoring and alerts. May run non-production pipelines and CI jobs (core role must be devops); never production deploys, merges to main or database writes."
+    }
+  ]
+}

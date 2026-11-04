@@ -1,0 +1,12 @@
+{
+  "name": "role-devops",
+  "displayName": "Role: DevOps",
+  "version": "0.1.0",
+  "description": "CI/CD pipelines, deployment setup, servers and containers, monitoring and alerts. May run non-production pipelines and CI jobs (core role must be devops); never production deploys, merges to main or database writes.",
+  "author": {
+    "name": "agent-ops contributors"
+  },
+  "dependencies": [
+    "core"
+  ]
+}

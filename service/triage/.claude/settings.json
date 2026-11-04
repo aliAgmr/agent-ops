@@ -1,0 +1,126 @@
+{
+  "permissions": {
+    "defaultMode": "dontAsk",
+    "additionalDirectories": [
+      "/srv/repos"
+    ],
+    "allow": [
+      "Read",
+      "Grep",
+      "Glob",
+      "Skill",
+      "Bash(git -C /srv/repos/* grep *)",
+      "Bash(git -C /srv/repos/* log *)",
+      "Bash(git -C /srv/repos/* show *)",
+      "Bash(git -C /srv/repos/* ls-files*)",
+      "Bash(git -C /srv/repos/* blame *)",
+      "Bash(ls:*)",
+      "Bash(wc:*)",
+      "mcp__plane",
+      "mcp__gitlab__get_*",
+      "mcp__gitlab__list_*",
+      "mcp__gitlab__search_*",
+      "mcp__github__get_*",
+      "mcp__github__list_*",
+      "mcp__github__search_*",
+      "mcp__github__pull_request_read",
+      "mcp__github__issue_read",
+      "mcp__postgres__postgres_mcp_connect",
+      "mcp__postgres__postgres_mcp_list_databases",
+      "mcp__postgres__postgres_mcp_list_connection_profiles",
+      "mcp__postgres__postgres_mcp_db_context",
+      "mcp__postgres__postgres_mcp_query",
+      "mcp__clickhouse__list_databases",
+      "mcp__clickhouse__list_tables",
+      "mcp__clickhouse__run_query",
+      "mcp__metabase__list_databases",
+      "mcp__metabase__list_schemas",
+      "mcp__metabase__list_tables",
+      "mcp__metabase__get_table_metadata",
+      "mcp__metabase__run_sql",
+      "mcp__metabase__search",
+      "mcp__metabase__get_card",
+      "mcp__metabase__run_card",
+      "mcp__metabase__list_collections",
+      "mcp__metabase__get_collection_items",
+      "mcp__metabase__get_dashboard",
+      "mcp__jenkins__getJob",
+      "mcp__jenkins__getJobs",
+      "mcp__jenkins__getBuild",
+      "mcp__jenkins__getBuildLog",
+      "mcp__jenkins__searchBuildLog",
+      "mcp__jenkins__getStatus",
+      "mcp__figma",
+      "Bash(/srv/agent-ops/infra/bin/lineage upstream *)",
+      "Bash(/srv/agent-ops/infra/bin/lineage impact *)"
+    ],
+    "deny": [
+      "Edit",
+      "Write",
+      "NotebookEdit",
+      "WebFetch",
+      "WebSearch",
+      "Bash(git * --open-files-in-pager*)",
+      "Bash(git * --config-env*)",
+      "Bash(git * --exec-path*)",
+      "Bash(git * --no-index*)",
+      "Bash(git * --output*)",
+      "mcp__metabase__create_card",
+      "mcp__metabase__update_card_sql",
+      "mcp__postgres__postgres_mcp_modify",
+      "mcp__postgres__postgres_mcp_bulk_load_csv",
+      "mcp__postgres__postgres_mcp_add_connection",
+      "mcp__postgres__postgres_mcp_remove_connection",
+      "mcp__jenkins__triggerBuild",
+      "mcp__jenkins__rebuildBuild",
+      "mcp__jenkins__replayBuild",
+      "mcp__jenkins__updateBuild",
+      "mcp__github__create_*",
+      "mcp__github__update_*",
+      "mcp__github__delete_*",
+      "mcp__github__merge_pull_request",
+      "mcp__github__push_files",
+      "mcp__github__create_or_update_file",
+      "mcp__github__run_workflow",
+      "mcp__github__rerun_*",
+      "mcp__github__cancel_workflow_run",
+      "mcp__github__enable_pr_auto_merge"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/../../plugins/core/scripts/guard.sh",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|Artifact.*|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/../../plugins/core/scripts/journal.sh pre",
+            "timeout": 8
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash|Artifact.*|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/../../plugins/core/scripts/journal.sh post",
+            "timeout": 8
+          }
+        ]
+      }
+    ]
+  }
+}

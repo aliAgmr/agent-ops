@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "metabase": {
+      "command": "bash",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/start.sh"],
+      "env": {
+        "METABASE_URL": "${user_config.metabase_url}",
+        "METABASE_API_KEY": "${user_config.metabase_api_key}"
+      }
+    }
+  }
+}

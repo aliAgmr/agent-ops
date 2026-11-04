@@ -1,0 +1,70 @@
+# Executable data-trap checks: each one is a read-only SELECT that returns one number, healthy when
+# it meets `expect`. Run by infra/bin/traps (nightly: all of them; release: the ones whose tables a
+# change reaches through lineage). Any agent can also run one by hand through the read-only
+# ClickHouse MCP (keep the first-line attribution comment).
+#
+# These are EXAMPLES on a sample billing warehouse: replace them with checks for your own tables.
+#
+#   id        stable name
+#   trap      which trap in SKILL.md it guards
+#   tables    every table it reads (how release picks the checks for a change)
+#   sql       one SELECT returning one number
+#   expect    "== 0", "<= 100", "< 0.005" …
+#   severity  high | medium | low
+#   action    block  = a release must not go green while it fails for a table the change reaches
+#             notify = a finding, never blocks
+#   why       what a failing value means for the numbers
+# A check that can't run is UNREADABLE, never passed. When a check's healthy value isn't zero yet,
+# set `expect` to today's baseline and say so in `why`.
+checks:
+  - id: credit-notes-exact-duplicates
+    trap: credit notes not deduplicated
+    tables: [analytics.credit_notes]
+    sql: |
+      -- agent: agent-ops trap-check
+      select count() - (select count() from (select distinct * from analytics.credit_notes))
+      from analytics.credit_notes
+    expect: "== 0"
+    severity: high
+    action: block
+    why: identical rows double-count credits in every sum and join
+  - id: ledger-duplicate-instalments
+    trap: payments ledger row grain
+    tables: [analytics.payments_ledger]
+    sql: |
+      -- agent: agent-ops trap-check
+      select count() from (
+        select invoice_id, instalment_no
+        from analytics.payments_ledger
+        group by invoice_id, instalment_no
+        having count() > 1)
+    expect: "== 0"
+    severity: high
+    action: block
+    why: a duplicated instalment inflates the amount owed = sum(instalment_amount)
+  - id: invoice-paid-more-than-amount
+    trap: outstanding = amount - paid_amount
+    tables: [analytics.invoices_daily]
+    sql: |
+      -- agent: agent-ops trap-check
+      select countIf(paid_amount > amount * 1.001 + 0.01)
+      from analytics.invoices_daily
+      where invoice_date >= today() - interval 90 day
+    expect: "== 0"
+    severity: high
+    action: block
+    why: an invoice paid for more than its amount means payments were double-allocated, so receivables go wrong
+  - id: order-line-total-repeated
+    trap: order-line total repeated on every shipment row
+    tables: [analytics.order_lines_daily]
+    sql: |
+      -- agent: agent-ops trap-check
+      select countIf(u_total > 1) from (
+        select order_line_id, uniqExact(line_total) u_total
+        from analytics.order_lines_daily
+        where order_date >= today() - interval 30 day
+        group by order_line_id)
+    expect: "== 0"
+    severity: medium
+    action: notify
+    why: a line whose rows disagree on line_total breaks revenue = sum(line_total / shipment_count)

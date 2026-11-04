@@ -1,0 +1,20 @@
+# Your team's private files (SETUP.md writes them; never commit them)
+people.yaml
+.env
+*.env
+env.rendered
+revert.env
+setup.answers.yaml
+
+# Build and tool output
+docs/reference/out/
+docs/reference/preview.html
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+.mcpb-cache/
+.DS_Store
+
+# Rendered per tick from mcp.template.json + routing.yaml (infra/bin/render-mcp.py)
+service/*/.mcp.json

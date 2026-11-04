@@ -1,0 +1,87 @@
+#!/usr/bin/env python3
+"""Shell access to the adapters (infra/adapters): one method call, JSON out. Tokens come from the env
+file and the process environment (run-agent.sh loads both), never from arguments.
+
+  adapter tracker [--role triage|release|nightly|admin] <method> [json-args]
+  adapter codehost <key> [--kind read|release] <method> [json-args]
+  adapter repos [--host <key>] [--release]            # every repo in routing.yaml
+  adapter people                                      # people.yaml (or the example template)
+  adapter git-auth <url>                              # git's Authorization header for a configured host's URL (read token), or nothing
+
+json-args: a JSON list (positional) or object (keyword arguments), e.g.
+  adapter tracker list_items '{"project_id": "…", "state_names": ["Inbox"]}'
+  adapter codehost main --kind release post_status '["acme/billing-backend", "abc1234", "success", "release-agent", "ok"]'
+Exit 2 on a usage error or unknown method, 1 on an API error (message on stderr, token redacted).
+"""
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import adapters as A  # noqa: E402
+
+
+def usage(msg: str) -> int:
+    print(f"adapter: {msg}\n" + (__doc__ or "").split("\n\n", 1)[1].split("\njson-args")[0], file=sys.stderr)
+    return 2
+
+
+def call(obj, method: str, raw: str):
+    if method.startswith("_") or not callable(getattr(obj, method, None)):
+        raise SystemExit(usage(f"unknown method {method!r}"))
+    args = json.loads(raw) if raw else []
+    fn = getattr(obj, method)
+    return fn(**args) if isinstance(args, dict) else fn(*args)
+
+
+def main(argv) -> int:
+    if not argv:
+        return usage("what to call?")
+    kind, rest = argv[0], argv[1:]
+    try:
+        if kind == "tracker":
+            role = "triage"
+            if rest[:1] == ["--role"]:
+                role, rest = rest[1], rest[2:]
+            if not rest:
+                return usage("which tracker method?")
+            out = call(A.tracker(role=role), rest[0], rest[1] if len(rest) > 1 else "")
+        elif kind == "codehost":
+            if not rest:
+                return usage("which code host key?")
+            key, rest = rest[0], rest[1:]
+            k = "read"
+            if rest[:1] == ["--kind"]:
+                k, rest = rest[1], rest[2:]
+            if not rest:
+                return usage("which code host method?")
+            out = call(A.codehost(key=key, kind=k), rest[0], rest[1] if len(rest) > 1 else "")
+        elif kind == "repos":
+            host = rest[rest.index("--host") + 1] if "--host" in rest else None
+            out = A.all_repos(A.load_routing(), host=host, release_only="--release" in rest)
+        elif kind == "people":
+            out = A.load_people()
+        elif kind == "git-auth":
+            if not rest:
+                return usage("git-auth needs a URL")
+            g = A.codehost_for_url(rest[0])
+            hdr = g.git_auth_header() if g else ""
+            if hdr:
+                print(hdr)       # read by repo-sync.sh into GIT_CONFIG_VALUE_*, never a command line
+            return 0
+        else:
+            return usage(f"unknown kind {kind!r}")
+    except A.AdapterError as e:
+        print(f"adapter: {e}", file=sys.stderr)
+        return 1
+    except (ValueError, TypeError) as e:
+        print(f"adapter: {e}", file=sys.stderr)
+        return 2
+    print(json.dumps(out, ensure_ascii=False))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

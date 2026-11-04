@@ -1,0 +1,97 @@
+{
+  "permissions": {
+    "defaultMode": "dontAsk",
+    "allow": [
+      "Read",
+      "Grep",
+      "Glob",
+      "Skill",
+      "Bash(/srv/agent-ops/infra/bin/post-commit-status.sh:*)",
+      "mcp__plane",
+      "mcp__gitlab__get_*",
+      "mcp__gitlab__list_*",
+      "mcp__gitlab__mr_discussions",
+      "mcp__gitlab__download_job_artifacts",
+      "mcp__gitlab__get_job_artifact_file",
+      "mcp__gitlab__create_merge_request_note",
+      "mcp__github__get_*",
+      "mcp__github__list_*",
+      "mcp__github__search_*",
+      "mcp__github__pull_request_read",
+      "mcp__github__issue_read",
+      "mcp__postgres__postgres_mcp_connect",
+      "mcp__postgres__postgres_mcp_db_context",
+      "mcp__postgres__postgres_mcp_query",
+      "mcp__clickhouse__list_databases",
+      "mcp__clickhouse__list_tables",
+      "mcp__clickhouse__run_query",
+      "Bash(/srv/agent-ops/infra/bin/lineage files *)",
+      "Bash(/srv/agent-ops/infra/bin/traps for-files *)",
+      "mcp__github__add_issue_comment"
+    ],
+    "deny": [
+      "Edit",
+      "Write",
+      "NotebookEdit",
+      "WebFetch",
+      "WebSearch",
+      "mcp__gitlab__create_merge_request",
+      "mcp__gitlab__create_pipeline",
+      "mcp__gitlab__create_branch",
+      "mcp__gitlab__create_or_update_file",
+      "mcp__gitlab__push_files",
+      "mcp__gitlab__update_*",
+      "mcp__gitlab__delete_*",
+      "mcp__gitlab__retry_*",
+      "mcp__gitlab__cancel_*",
+      "mcp__postgres__postgres_mcp_modify",
+      "mcp__postgres__postgres_mcp_bulk_load_csv",
+      "mcp__github__create_*",
+      "mcp__github__update_*",
+      "mcp__github__delete_*",
+      "mcp__github__merge_pull_request",
+      "mcp__github__push_files",
+      "mcp__github__create_or_update_file",
+      "mcp__github__run_workflow",
+      "mcp__github__rerun_*",
+      "mcp__github__cancel_workflow_run",
+      "mcp__github__enable_pr_auto_merge"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/../../plugins/core/scripts/guard.sh",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|Artifact.*|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/../../plugins/core/scripts/journal.sh pre",
+            "timeout": 8
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash|Artifact.*|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/../../plugins/core/scripts/journal.sh post",
+            "timeout": 8
+          }
+        ]
+      }
+    ]
+  }
+}

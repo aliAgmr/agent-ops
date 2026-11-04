@@ -1,0 +1,370 @@
+<title>agent-ops reference</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: an engineering manual. Fixed index rail on the left (top strip on phones), one long
+   column of reference text, then reports and the change log. Tokens first. */
+:root {
+  --paper: #f5f7f7;      /* page */
+  --sheet: #ffffff;      /* raised panels, tables */
+  --ink: #142225;        /* body text */
+  --ink-2: #4a5b5e;      /* secondary text */
+  --ink-3: #7a898c;      /* captions, axes */
+  --rule: #d8e0e1;       /* hairlines */
+  --rule-2: #e9eeee;     /* grid */
+  --accent: #0b6e74;     /* links, active index */
+  --accent-wash: #e1f0f0;
+  --code-bg: #eef3f3;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;   /* agents, fixed order */
+  --good: #0ca30c; --warn: #fab219; --serious: #ec835a; --critical: #d03b3b;
+  --f-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #101718; --sheet: #172122; --ink: #e3eced; --ink-2: #a9b9bb; --ink-3: #7d8f91;
+  --rule: #2b3a3c; --rule-2: #1f2b2d; --accent: #5cc2c7; --accent-wash: #173335; --code-bg: #1b2a2c;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --paper: #101718; --sheet: #172122; --ink: #e3eced; --ink-2: #a9b9bb; --ink-3: #7d8f91;
+  --rule: #2b3a3c; --rule-2: #1f2b2d; --accent: #5cc2c7; --accent-wash: #173335; --code-bg: #1b2a2c;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { background: var(--paper); color: var(--ink); font: 15px/1.6 var(--f-body); margin: 0; }
+a { color: var(--accent); text-underline-offset: 2px; }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code, pre, .mono { font-family: var(--f-mono); font-size: 0.88em; }
+:not(pre) > code { background: var(--code-bg); padding: 0.08em 0.35em; border-radius: 3px; overflow-wrap: anywhere; }
+pre { background: var(--code-bg); padding: 12px 14px; border-radius: 4px; overflow-x: auto; line-height: 1.45; }
+pre.mermaid { background: var(--sheet); border: 1px solid var(--rule); text-align: center; }
+
+.shell { display: grid; grid-template-columns: 248px minmax(0, 1fr); min-height: 100%; }
+.rail { position: sticky; top: env(safe-area-inset-top, 0px); align-self: start; height: 100vh; overflow-y: auto;
+  border-right: 1px solid var(--rule); padding: 24px 18px 40px max(18px, env(safe-area-inset-left, 0px)); }
+.brand { font: 600 19px/1.15 var(--f-display); letter-spacing: 0.01em; margin: 0 0 4px; }
+.built { font: 12px/1.5 var(--f-mono); color: var(--ink-3); margin: 0 0 22px; }
+.rail h4 { font: 600 11px/1 var(--f-body); text-transform: uppercase; letter-spacing: 0.09em; color: var(--ink-3); margin: 20px 0 8px; }
+.rail ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
+.rail a { display: block; padding: 4px 8px; border-radius: 3px; color: var(--ink-2); text-decoration: none; font-size: 14px; }
+.rail a:hover { background: var(--accent-wash); color: var(--ink); }
+.rail a.on { background: var(--accent-wash); color: var(--accent); font-weight: 500; }
+.rail .num { font: 11px var(--f-mono); color: var(--ink-3); margin-right: 6px; }
+
+main { min-width: 0; padding-block: 28px 80px; padding-left: max(32px, env(safe-area-inset-left, 0px)); padding-right: max(32px, env(safe-area-inset-right, 0px)); }
+.col { max-width: 860px; }
+.doc { scroll-margin-top: 16px; padding-bottom: 36px; margin-bottom: 36px; border-bottom: 1px solid var(--rule); }
+.eyebrow { font: 500 12px/1 var(--f-mono); color: var(--ink-3); letter-spacing: 0.04em; margin: 0 0 10px; display: flex; gap: 12px; flex-wrap: wrap; }
+h1, h2, h3, h4 { text-wrap: balance; line-height: 1.25; }
+.doc > h1 { font: 600 34px/1.1 var(--f-display); margin: 0 0 18px; letter-spacing: -0.005em; }
+.doc h2 { font: 600 22px/1.25 var(--f-display); margin: 34px 0 10px; }
+.doc h3 { font: 600 16.5px/1.3 var(--f-body); margin: 24px 0 6px; }
+.doc p, .doc li { max-width: 68ch; }
+.doc ul, .doc ol { padding-left: 1.3em; }
+.tablewrap, .doc table { display: block; overflow-x: auto; max-width: 100%; }
+table { border-collapse: collapse; font-size: 13.5px; margin: 12px 0 18px; background: var(--sheet); }
+th, td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--rule); }
+th { font-weight: 600; color: var(--ink-2); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; background: var(--sheet); }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+
+.intro { font-size: 17px; color: var(--ink-2); max-width: 64ch; margin: 0 0 8px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 16px 0 22px; }
+.tile { background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px; padding: 12px 14px; }
+.tile b { display: block; font: 600 24px/1.1 var(--f-display); font-variant-numeric: tabular-nums; }
+.tile span { font-size: 12.5px; color: var(--ink-2); }
+.tile i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: 0; }
+
+.chip { display: inline-flex; align-items: center; gap: 5px; font: 500 11.5px/1 var(--f-mono); padding: 3px 7px; border-radius: 10px; border: 1px solid var(--rule); color: var(--ink-2); white-space: nowrap; }
+.chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); }
+.chip.ok::before { background: var(--good); } .chip.failed::before { background: var(--critical); }
+.chip.error_reported::before { background: var(--serious); } .chip.usage_limit::before { background: var(--warn); }
+.chip.k-feat::before { background: var(--s1); } .chip.k-fix::before { background: var(--s2); }
+.chip.k-docs::before { background: var(--s3); } .chip.k-chore::before, .chip.k-test::before { background: var(--s4); }
+
+.chart { position: relative; background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px; padding: 12px 12px 6px; margin: 10px 0 18px; }
+.chart h4 { margin: 0 0 2px; font: 600 14px var(--f-body); }
+.chart .sub { font-size: 12.5px; color: var(--ink-3); margin: 0 0 6px; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart svg text { fill: var(--ink-3); font: 10.5px var(--f-mono); }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12.5px; color: var(--ink-2); margin: 4px 0 6px; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--paper); font: 12px/1.45 var(--f-body); padding: 7px 9px; border-radius: 4px; white-space: nowrap; z-index: 5; }
+.tip[hidden] { display: none !important; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.grid2 > * { min-width: 0; }
+.hbar { display: grid; grid-template-columns: minmax(0, 11em) 1fr auto; gap: 4px 8px; align-items: center; font-size: 12.5px; }
+.hbar .lab { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--f-mono); color: var(--ink-2); }
+.hbar .bar { height: 10px; border-radius: 0 3px 3px 0; background: var(--accent); min-width: 2px; }
+.hbar .v { font-variant-numeric: tabular-nums; color: var(--ink-2); }
+
+.tl-controls { display: flex; gap: 8px; flex-wrap: wrap; margin: 6px 0 16px; }
+.tl-controls input, .tl-controls select { font: 14px var(--f-body); padding: 7px 10px; border: 1px solid var(--rule); border-radius: 4px; background: var(--sheet); color: var(--ink); min-width: 0; }
+.tl-controls input { flex: 1 1 220px; }
+.tl-month { font: 600 13px var(--f-mono); color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em; margin: 22px 0 6px; }
+.tl { list-style: none; margin: 0; padding: 0; border-left: 2px solid var(--rule); }
+.tl > li { position: relative; padding: 2px 0 14px 18px; }
+.tl > li::before { content: ""; position: absolute; left: -6px; top: 9px; width: 10px; height: 10px; border-radius: 50%; background: var(--paper); border: 2px solid var(--accent); }
+.tl .when { font: 12px var(--f-mono); color: var(--ink-3); display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.tl .what { font-weight: 500; margin: 2px 0; overflow-wrap: anywhere; }
+.tl details { font-size: 13.5px; color: var(--ink-2); }
+.tl summary { cursor: pointer; color: var(--accent); font-size: 13px; }
+.tl .commit { margin: 8px 0; }
+.tl .commit pre { white-space: pre-wrap; font-size: 12.5px; margin: 4px 0; }
+.tl .files { font: 12px/1.55 var(--f-mono); max-height: 220px; overflow: auto; background: var(--code-bg); padding: 8px 10px; border-radius: 4px; }
+.empty { color: var(--ink-3); font-style: italic; }
+
+@media (max-width: 900px) {
+  .shell { grid-template-columns: minmax(0, 1fr); }
+  .rail { position: sticky; top: env(safe-area-inset-top, 0px); height: auto; z-index: 4; background: var(--paper); border-right: 0; border-bottom: 1px solid var(--rule);
+    padding: 10px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px)); }
+  body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--paper); }
+  .rail .built, .rail h4 { display: none; }
+  .brand { font-size: 16px; margin-bottom: 6px; }
+  .rail nav { display: flex; overflow-x: auto; gap: 2px; }
+  .rail ol { display: flex; gap: 2px; }
+  .rail a { white-space: nowrap; font-size: 13px; }
+  main { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .doc > h1 { font-size: 27px; }
+  .doc { scroll-margin-top: 90px; }
+}
+</style>
+
+<div class="shell">
+  <aside class="rail">
+    <p class="brand">agent-ops reference</p>
+    <p class="built" id="built"></p>
+    <nav aria-label="Contents">
+      <h4>Reference</h4>
+      <ol id="nav-ref"><!--NAV--></ol>
+      <h4>Reports</h4>
+      <ol>
+        <li><a href="#runs">Agent runs</a></li>
+        <li><a href="#quality">Quality</a></li>
+        <li><a href="#teammates">Teammates</a></li>
+        <li><a href="#tools">Tools</a></li>
+      </ol>
+      <h4>History</h4>
+      <ol>
+        <li><a href="#timeline">Timeline</a></li>
+        <li><a href="#maintaining">Keeping this page current</a></li>
+      </ol>
+    </nav>
+  </aside>
+
+  <main><div class="col">
+    <!--SECTIONS-->
+
+    <section class="doc" id="runs">
+      <p class="eyebrow"><span>Report</span><span id="runs-window"></span></p>
+      <h1>Agent runs</h1>
+      <p class="intro">Every tick of the unattended agents: how often they ran, how they ended and what they cost at API prices. Idle ticks (the precheck found nothing to do) never start Claude and aren't counted.</p>
+      <div class="tiles" id="runs-tiles"></div>
+      <div class="chart" id="cost-chart"></div>
+      <div class="chart" id="runs-chart"></div>
+      <h2>Latest runs</h2>
+      <div id="runs-recent"></div>
+    </section>
+
+    <section class="doc" id="quality">
+      <p class="eyebrow"><span>Report</span><span id="quality-window"></span></p>
+      <h1>Quality</h1>
+      <p class="intro">How well the agents back what they write. A <em>claim</em> is one factual list item, table row or paragraph; it is <em>unsourced</em> when it cites nothing checkable (a file and line, a query, an MR, a commit, a build, an artifact, a link). Counted by <span class="mono">infra/quality/claims.py</span> on what was actually posted. The analyst's fresh checker (a separate reviewer that opens every cited source) adds how many claims held up.</p>
+      <div class="tiles" id="quality-tiles"></div>
+      <h2>Latest analyses</h2>
+      <div id="quality-recent"></div>
+    </section>
+
+    <section class="doc" id="teammates">
+      <p class="eyebrow"><span>Report</span><span id="tm-window"></span></p>
+      <h1>Teammates</h1>
+      <p class="intro">What each person does with the shared agents: questions to the project agent (agent-mcp), Telegram messages sent through their Claude (who and when only; never the text), and task-board items they created or closed.</p>
+      <div class="tablewrap" id="tm-table"></div>
+    </section>
+
+    <section class="doc" id="tools">
+      <p class="eyebrow"><span>Report</span><span id="tools-window"></span></p>
+      <h1>Tools</h1>
+      <p class="intro">Which tools each service agent may use, which it actually calls, and which calls the guard or the permission rules stopped.</p>
+      <h2>Calls in the window</h2>
+      <div class="grid2" id="tools-usage"></div>
+      <h2>Guard rules</h2>
+      <div id="guard-rules"></div>
+      <h2>Service agents' permissions and MCP servers</h2>
+      <div id="inv-agents"></div>
+      <h2>Plugins for people's agents</h2>
+      <div id="inv-plugins"></div>
+    </section>
+
+    <section class="doc" id="timeline">
+      <p class="eyebrow"><span>History</span><span id="tl-count"></span></p>
+      <h1>Timeline</h1>
+      <p class="intro">Every change that reached <code>main</code>, newest first: the merge request, the commits in it with their full messages, and the files it touched. Built from git on every publish, so it never drifts from the repo.</p>
+      <div class="tl-controls">
+        <input id="tl-q" type="search" placeholder="Search changes, files, commits" aria-label="Search the timeline">
+        <select id="tl-kind" aria-label="Kind of change"><option value="">All kinds</option></select>
+      </div>
+      <div id="tl"></div>
+    </section>
+
+    <section class="doc" id="maintaining">
+      <p class="eyebrow"><span>For agents</span></p>
+      <h1>Keeping this page current</h1>
+      <p>This page is generated. Its text lives in the repo, so a change and its documentation land in the same merge request.</p>
+      <ol>
+        <li>Edit the matching file under <code>docs/reference/sections/</code> in the same branch as the change (new component → add it; changed behaviour → update it; removed → delete it).</li>
+        <li>After the merge, on the agent host: <code>git -C /srv/agent-ops pull</code>, then <code>uv run --with markdown --with pyyaml python docs/reference/build.py</code> (with the env file loaded; <code>--offline</code> builds from the repo alone).</li>
+        <li>Publish <code>docs/reference/out/index.html</code> wherever your team reads docs: a static site, an internal wiki that takes HTML, or a private Claude artifact. The timeline and reports rebuild themselves.</li>
+        <li>Schedule steps 2–3 daily so the reports never go stale.</li>
+      </ol>
+      <p>The build refuses to write anything that still contains an email or IP address. Service agents can't publish artifacts (guard rule 8); only a person's session or a scheduled job publishes.</p>
+    </section>
+  </div></main>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script id="data" type="application/json">/*DATA*/</script>
+<script>
+(function () {
+  const D = JSON.parse(document.getElementById("data").textContent);
+  const R = D.reports, TL = D.timeline.entries, META = D.reports.meta;
+  const AGENTS = ["triage", "analyst", "release", "nightly"];
+  const COLORS = { triage: "var(--s1)", analyst: "var(--s2)", release: "var(--s3)", nightly: "var(--s4)" };
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const usd = (n) => "$" + (n >= 100 ? Math.round(n).toLocaleString("en") : n.toFixed(2));
+  const greg = new Intl.DateTimeFormat("en", { day: "numeric", month: "short", year: "numeric" });
+  const fmtDate = (iso) => greg.format(new Date(iso));
+  const win = `last ${META.window_days} days`;
+
+  $("#built").innerHTML = `built ${esc(META.generated_at.replace("T", " ").slice(0, 16))} UTC<br>from <span class="mono">main @ ${esc(META.commit)}</span>`;
+  ["#runs-window", "#quality-window", "#tm-window", "#tools-window"].forEach((s) => ($(s).textContent = win));
+
+  /* ---- tooltip ---- */
+  const tip = $("#tip");
+  function showTip(evt, html) {
+    tip.innerHTML = html; tip.hidden = false;
+    const host = evt.currentTarget.closest(".chart").getBoundingClientRect();
+    const x = evt.clientX - host.left, y = evt.clientY - host.top;
+    evt.currentTarget.closest(".chart").appendChild(tip);
+    const w = tip.offsetWidth;
+    tip.style.left = Math.max(4, Math.min(x + 12, host.width - w - 4)) + "px";
+    tip.style.top = (y - tip.offsetHeight - 10) + "px";
+  }
+  const hideTip = () => (tip.hidden = true);
+
+  /* ---- runs ---- */
+  const days = []; { const end = new Date(META.generated_at); for (let i = META.window_days - 1; i >= 0; i--) { const d = new Date(end); d.setUTCDate(d.getUTCDate() - i); days.push(d.toISOString().slice(0, 10)); } }
+  const total = AGENTS.reduce((a, k) => a + (R.runs[k]?.cost || 0), 0);
+  $("#runs-tiles").innerHTML = `<div class="tile"><b>${usd(total)}</b><span>all agents, ${win}</span></div>` +
+    AGENTS.map((a) => { const r = R.runs[a] || {}; const ok = r.outcomes?.ok || 0;
+      return `<div class="tile"><b>${r.runs || 0}</b><span><i style="background:${COLORS[a]}"></i>${a} runs · ${usd(r.cost || 0)}${r.runs ? ` · ${Math.round(100 * ok / r.runs)}% ok` : ""}${r.median_turns ? ` · ~${r.median_turns} turns` : ""}</span></div>`; }).join("");
+
+  function stackedBars(el, title, sub, valueOf, fmt) {
+    const W = 820, H = 210, L = 44, B = 22, T = 8, cw = (W - L) / days.length, bw = Math.max(3, cw - 2);
+    const totals = days.map((d) => AGENTS.reduce((s, a) => s + valueOf(a, d), 0));
+    const max = Math.max(...totals, 0) || 1;
+    const step = niceStep(max); const top = Math.ceil(max / step) * step;
+    const y = (v) => T + (H - T - B) * (1 - v / top);
+    let g = "";
+    for (let v = 0; v <= top + 1e-9; v += step) g += `<line x1="${L}" x2="${W}" y1="${y(v)}" y2="${y(v)}" stroke="var(--rule-2)"/><text x="${L - 6}" y="${y(v) + 3.5}" text-anchor="end">${fmt(v, true)}</text>`;
+    let bars = "";
+    days.forEach((d, i) => {
+      let acc = 0; const x = L + i * cw + 1;
+      const segs = AGENTS.map((a) => ({ a, v: valueOf(a, d) })).filter((s) => s.v > 0);
+      segs.forEach((s, j) => { const y0 = y(acc), y1 = y(acc + s.v); acc += s.v;
+        const h = Math.max(0, y0 - y1 - (j < segs.length - 1 ? 2 : 0)); const last = j === segs.length - 1;
+        bars += last ? `<path d="${roundTop(x, y1, bw, h)}" fill="${COLORS[s.a]}"/>` : `<rect x="${x}" y="${y1 + 0}" width="${bw}" height="${h}" fill="${COLORS[s.a]}"/>`; });
+      bars += `<rect class="hit" data-i="${i}" x="${L + i * cw}" y="${T}" width="${cw}" height="${H - T - B}" fill="transparent"/>`;
+      if (i % 5 === 0 || i === days.length - 1) bars += `<text x="${x + bw / 2}" y="${H - 6}" text-anchor="middle">${d.slice(5)}</text>`;
+    });
+    el.innerHTML = `<h4>${title}</h4><p class="sub">${sub}</p><div class="legend">${AGENTS.map((a) => `<span><i style="background:${COLORS[a]}"></i>${a}</span>`).join("")}</div>
+      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(title)}">${g}<line x1="${L}" x2="${W}" y1="${y(0)}" y2="${y(0)}" stroke="var(--rule)"/>${bars}</svg>`;
+    el.querySelectorAll(".hit").forEach((r) => {
+      r.addEventListener("mousemove", (e) => { const d = days[+r.dataset.i];
+        showTip(e, `<b>${fmtDate(d + "T12:00:00Z")}</b><br>` + AGENTS.map((a) => `${a}: ${fmt(valueOf(a, d))}`).join("<br>")); });
+      r.addEventListener("mouseleave", hideTip);
+    });
+  }
+  function roundTop(x, y, w, h) { const r = Math.min(4, w / 2, h); if (h <= 0) return ""; return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`; }
+  function niceStep(max) { const raw = max / 4, p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p; }
+  stackedBars($("#cost-chart"), "Cost per day", "API-price cost of every run, by agent (the 5-hour budget limit is shared by all of them)",
+    (a, d) => R.runs[a]?.days?.[d]?.cost || 0, (v, axis) => axis ? "$" + (v === 0 || v >= 10 ? Math.round(v) : v.toFixed(v < 1 ? 2 : 1)) : usd(v));
+  stackedBars($("#runs-chart"), "Runs per day", "Ticks that started Claude, by agent",
+    (a, d) => R.runs[a]?.days?.[d]?.runs || 0, (v) => String(Math.round(v)));
+
+  $("#runs-recent").innerHTML = AGENTS.map((a) => { const rec = R.runs[a]?.recent || [];
+    const skipped = Object.entries(R.runs[a]?.skipped || {}).map(([k, v]) => `${v} ${k}`).join(", ");
+    return `<h3><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${COLORS[a]};margin-right:6px"></i>${a}</h3>` +
+      (skipped ? `<p style="font-size:13px;color:var(--ink-2);margin:0">Skipped ticks: ${esc(skipped)}</p>` : "") +
+      (rec.length ? `<div class="tablewrap"><table><thead><tr><th>Started (UTC)</th><th>Outcome</th><th class="n">Turns</th><th class="n">Cost</th><th>Summary</th></tr></thead><tbody>` +
+        rec.map((r) => `<tr><td class="mono" style="white-space:nowrap">${esc((r.started || "").replace("T", " ").slice(0, 16))}</td><td><span class="chip ${esc(r.outcome)}">${esc(r.outcome)}</span></td><td class="n">${r.turns ?? "–"}</td><td class="n">${usd(r.cost || 0)}</td><td style="min-width:260px">${esc(r.summary)}</td></tr>`).join("") +
+        `</tbody></table></div>` : `<p class="empty">No runs in the window.</p>`); }).join("");
+
+  /* ---- quality ---- */
+  { const Q = R.quality || {}, A = Q.analyst || {}, M = Q.answers || {};
+    const pct = (v) => v == null ? "–" : Math.round(100 * v) + "%";
+    $("#quality-tiles").innerHTML =
+      `<div class="tile"><b>${pct(A.rate)}</b><span>analyst: unsourced claims · ${A.unsourced || 0} of ${A.claims || 0} in ${A.runs || 0} analyses</span></div>` +
+      `<div class="tile"><b>${A.check_total ? pct(A.supported / A.check_total) : "–"}</b><span>analyst: claims the fresh checker confirmed · ${A.supported || 0} of ${A.check_total || 0}${A.fixed ? ` · ${A.fixed} fixed before posting` : ""}${A.not_checked ? ` · ${A.not_checked} not checked` : ""}</span></div>` +
+      `<div class="tile"><b>${pct(M.rate)}</b><span>agent-mcp answers: claims with no inline source · ${M.count || 0} answers${M.without_sources ? ` · ${M.without_sources} with no source list` : ""}</span></div>`;
+    const rec = A.recent || [];
+    $("#quality-recent").innerHTML = rec.length ? `<div class="tablewrap"><table><thead><tr><th>Started (UTC)</th><th>Item</th><th class="n">Claims</th><th class="n">Unsourced</th><th>Fresh check</th></tr></thead><tbody>` +
+      rec.map((r) => `<tr><td class="mono" style="white-space:nowrap">${esc((r.started || "").replace("T", " ").slice(0, 16))}</td><td class="mono">${esc(r.item || "")}</td><td class="n">${r.claims ?? "–"}</td><td class="n">${r.unsourced ?? "–"}${r.rate != null ? ` (${pct(r.rate)})` : ""}</td><td>${r.check && typeof r.check === "object" ? `${r.check.supported}/${r.check.total} supported${r.check.fixed ? `, ${r.check.fixed} fixed` : ""}` : esc(r.check || "not reported")}</td></tr>`).join("") +
+      `</tbody></table></div>` : `<p class="empty">No analyses in the window yet.</p>`; }
+
+  /* ---- teammates ---- */
+  const tm = Object.values(R.teammates).sort((a, b) => (b.questions + (b.tasks_created || 0)) - (a.questions + (a.tasks_created || 0)));
+  const hasTasks = tm.some((p) => p.tasks_created !== null);
+  $("#tm-table").innerHTML = `<table><thead><tr><th>Person</th><th>Role</th><th class="n">Questions</th><th class="n">Conversations</th><th class="n">Messages sent</th><th class="n">Received</th>${hasTasks ? `<th class="n">Tasks created</th><th class="n">Tasks closed</th>` : ""}</tr></thead><tbody>` +
+    tm.map((p) => `<tr><td>${esc(p.name)}</td><td>${esc(p.role)}</td><td class="n">${p.questions}</td><td class="n">${p.conversations}</td><td class="n">${p.messages_sent}</td><td class="n">${p.messages_received}</td>${hasTasks ? `<td class="n">${p.tasks_created ?? "–"}</td><td class="n">${p.tasks_closed ?? "–"}</td>` : ""}</tr>`).join("") +
+    `</tbody></table><p style="font-size:12.5px;color:var(--ink-3)">Questions and conversations: agent-mcp's database. Messages: its delivery log (sent only). Tasks: the task board, every project in projects.yaml; closed = moved to Done while assigned to that person.</p>`;
+
+  /* ---- tools ---- */
+  $("#tools-usage").innerHTML = [...AGENTS, "agent-mcp"].map((a) => { const t = R.tools[a] || {}; const top = Object.entries(t.calls || {}).slice(0, 10);
+    const max = Math.max(1, ...top.map((x) => x[1]));
+    const blocked = Object.entries(t.blocked || {}).map(([k, v]) => `<span class="chip failed">${esc(k)} × ${v}</span>`).join(" ");
+    return `<div class="chart"><h4>${a}</h4><p class="sub">${t.sessions || 0} sessions · ${(t.total_calls || 0).toLocaleString("en")} tool calls</p>` +
+      (top.length ? `<div class="hbar">${top.map(([k, v]) => `<span class="lab" title="${esc(k)}">${esc(k)}</span><span class="bar" style="width:${(100 * v / max).toFixed(1)}%"></span><span class="v">${v}</span>`).join("")}</div>` : `<p class="empty">No transcripts in the window.</p>`) +
+      `<p class="sub" style="margin-top:8px">Stopped: ${blocked || "none"}</p></div>`; }).join("");
+
+  const inv = R.inventory;
+  $("#guard-rules").innerHTML = `<table><thead><tr><th class="n">#</th><th>Rule (plugins/core/scripts/guard.sh)</th></tr></thead><tbody>` +
+    inv.guard_rules.map((g) => `<tr><td class="n">${g.n}</td><td>${esc(g.rule)}</td></tr>`).join("") + `</tbody></table>`;
+  const mcpRows = (m) => Object.entries(m).map(([k, v]) => `<tr><td class="mono">${esc(k)}</td><td class="mono">${esc(v.package || v.type)}</td><td>${v.read_only_credential ? "read-only" : "read/write"}</td><td class="mono">${esc((v.credentials || []).join(", "))}</td></tr>`).join("");
+  $("#inv-agents").innerHTML = Object.entries(inv.service_agents).map(([a, v]) =>
+    `<h3>${esc(a)}</h3>` + (Object.keys(v.mcp).length ? `<div class="tablewrap"><table><thead><tr><th>MCP server</th><th>Package</th><th>Credential</th><th>Env variables</th></tr></thead><tbody>${mcpRows(v.mcp)}</tbody></table></div>` : "") +
+    `<details><summary>${v.allow.length} allowed, ${v.deny.length} denied tool patterns${v.skills.length ? `; skills: ${esc(v.skills.join(", "))}` : ""}</summary><div class="tablewrap"><table><thead><tr><th>Allowed</th><th>Denied</th></tr></thead><tbody><tr><td class="mono" style="font-size:12px">${v.allow.map(esc).join("<br>")}</td><td class="mono" style="font-size:12px">${v.deny.map(esc).join("<br>")}</td></tr></tbody></table></div></details>`).join("");
+  $("#inv-plugins").innerHTML = Object.entries(inv.plugins).map(([p, v]) =>
+    `<h3>${esc(p)} <span class="chip">${esc(v.version || "no version")}</span></h3>` +
+    (Object.keys(v.mcp).length ? `<div class="tablewrap"><table><thead><tr><th>MCP server</th><th>Package</th><th>Credential</th><th>Env variables</th></tr></thead><tbody>${mcpRows(v.mcp)}</tbody></table></div>` : "") +
+    (v.skills.length ? `<div class="tablewrap"><table><thead><tr><th>Skill</th><th>When it's used</th></tr></thead><tbody>${v.skills.map((s) => `<tr><td class="mono" style="white-space:nowrap">${esc(s.name)}</td><td>${esc(s.description)}</td></tr>`).join("")}</tbody></table></div>` : "")).join("");
+
+  /* ---- timeline ---- */
+  $("#tl-count").textContent = `${TL.length} changes`;
+  const kinds = [...new Set(TL.map((e) => e.kind))].sort();
+  $("#tl-kind").insertAdjacentHTML("beforeend", kinds.map((k) => `<option value="${esc(k)}">${esc(k)}</option>`).join(""));
+  function renderTL() {
+    const q = $("#tl-q").value.trim().toLowerCase(), k = $("#tl-kind").value;
+    const rows = TL.filter((e) => (!k || e.kind === k) && (!q || JSON.stringify(e).toLowerCase().includes(q)));
+    let html = "", month = "";
+    rows.forEach((e) => { const m = e.date.slice(0, 7);
+      if (m !== month) { html += (month ? "</ol>" : "") + `<p class="tl-month">${new Intl.DateTimeFormat("en", { month: "long", year: "numeric" }).format(new Date(e.date))}</p><ol class="tl">`; month = m; }
+      html += `<li><div class="when"><span>${fmtDate(e.date)}</span><span class="chip k-${esc(e.kind)}">${esc(e.kind)}</span>${e.mr ? `<span>MR !${e.mr}</span>` : `<span>direct commit</span>`}<span class="mono">${esc(e.hash)}</span></div>
+        <p class="what">${esc(e.title)}</p>
+        <details><summary>${e.commits.length} commit${e.commits.length === 1 ? "" : "s"}${e.stat ? " · " + esc(e.stat) : ""}</summary>
+        ${e.commits.map((c) => `<div class="commit"><span class="mono">${esc(c.hash)}</span> ${esc(c.subject)}${c.body ? `<pre>${esc(c.body)}</pre>` : ""}</div>`).join("")}
+        ${e.files.length ? `<div class="files">${e.files.map(esc).join("<br>")}${e.more_files ? `<br>… and ${e.more_files} more` : ""}</div>` : ""}</details></li>`; });
+    $("#tl").innerHTML = rows.length ? html + "</ol>" : `<p class="empty">No change matches that search.</p>`;
+  }
+  $("#tl-q").addEventListener("input", renderTL); $("#tl-kind").addEventListener("change", renderTL); renderTL();
+
+  /* ---- active index ---- */
+  const links = [...document.querySelectorAll(".rail a")];
+  const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) links.forEach((l) => l.classList.toggle("on", l.getAttribute("href") === "#" + e.target.id)); }), { rootMargin: "-20% 0px -70% 0px" });
+  document.querySelectorAll("section.doc").forEach((s) => io.observe(s));
+})();
+</script>

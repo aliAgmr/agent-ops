@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Keeps infra/macos/publish-tunnel.sh running: the gateway's __BIND__:__REMOTE_PORT__ → this host's
+     __LOCAL_HOST__:__LOCAL_PORT__. Rendered by install.sh twice: as __PREFIX__.publish-tunnel
+     (PUBLISH_TUNNEL=true: the task board) and __PREFIX__.bi-tunnel (BI_TUNNEL=true: BI → its database). -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>__PREFIX__.__JOB__</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/srv/agent-ops/infra/macos/publish-tunnel.sh</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>TUNNEL_KEY</key><string>__KEY__</string>
+    <key>TUNNEL_TARGET</key><string>__TARGET__</string>
+    <key>TUNNEL_TARGET_PORT</key><string>__TARGET_PORT__</string>
+    <key>TUNNEL_JUMP</key><string>__JUMP__</string>
+    <key>PUBLISH_BIND</key><string>__BIND__</string>
+    <key>PUBLISH_PORT</key><string>__REMOTE_PORT__</string>
+    <key>PUBLISH_LOCAL_HOST</key><string>__LOCAL_HOST__</string>
+    <key>PUBLISH_LOCAL_PORT</key><string>__LOCAL_PORT__</string>
+    <key>PATH</key><string>/usr/bin:/bin</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>5</integer>
+  <key>StandardOutPath</key><string>__HOME__/Library/Logs/agent-ops/__JOB__/launchd.out</string>
+  <key>StandardErrorPath</key><string>__HOME__/Library/Logs/agent-ops/__JOB__/launchd.err</string>
+</dict>
+</plist>

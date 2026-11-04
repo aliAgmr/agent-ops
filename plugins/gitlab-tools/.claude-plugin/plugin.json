@@ -1,0 +1,27 @@
+{
+  "name": "gitlab-tools",
+  "displayName": "GitLab tools",
+  "version": "0.1.0",
+  "description": "GitLab MCP server (merge requests, pipelines, issues). Install it when your team's code lives on GitLab (gitlab.com or self-managed). Merges, deployments and production pipelines are blocked by the core guard.",
+  "author": {
+    "name": "agent-ops contributors"
+  },
+  "dependencies": [
+    "core"
+  ],
+  "userConfig": {
+    "gitlab_api_url": {
+      "type": "string",
+      "title": "GitLab API URL",
+      "description": "e.g. https://gitlab.com/api/v4 or https://gitlab.example.com/api/v4",
+      "required": true
+    },
+    "gitlab_token": {
+      "type": "string",
+      "title": "GitLab personal access token",
+      "description": "Your own token with the api scope (Developer on the team repos is enough; never Maintainer for an agent).",
+      "sensitive": true,
+      "required": true
+    }
+  }
+}

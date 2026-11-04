@@ -1,0 +1,93 @@
+# Who owns what. The triage agent reads this file on every tick; SETUP.md writes your own version.
+# This committed copy is an EXAMPLE team ("Acme"): replace it with yours. Personal details
+# (emails, chat ids) live in people.yaml, which is git-ignored (see people.template.yaml).
+
+tracker: plane                   # the task board adapter (infra/adapters/tracker/): plane (built in)
+
+code_hosts:                      # where repos live; each repo below names one of these keys
+  main: { type: gitlab, url: https://gitlab.example.com }
+  oss:  { type: github, url: https://github.com }
+
+# The default project (key BIL). Each team: the person (or people) who own it, the label triage
+# sets, what it owns, and its repos.
+teams:
+  product:
+    person: sam
+    label: team:product
+    owns: [priorities, business rules, acceptance criteria]
+  design:
+    person: riya
+    label: team:design
+    owns: [page designs, Figma, UI states, copy placement]
+  backend:
+    person: alex
+    label: team:backend
+    owns: [API routes, DTOs, permissions, business logic, database schema and migrations]
+    repos:
+      - host: main
+        path: acme/billing-backend
+        default_branch: dev
+  frontend:
+    person: noor
+    label: team:frontend
+    owns: [dashboard pages, API integration, UI behaviour]
+    repos:
+      - host: main
+        path: acme/billing-frontend
+        default_branch: dev
+  data:
+    person: kenji
+    label: team:data
+    owns: [warehouse tables and views, BI questions, data jobs]
+    repos:
+      - host: oss
+        path: acme/warehouse
+        default_branch: main
+  devops:
+    person: lena
+    label: team:devops
+    owns: [CI/CD pipelines, deployment setup, servers and containers, monitoring and alerts]
+
+# More projects. A project listed here uses its own people and repos per team; a team missing here
+# does not exist in that project (triage routes elsewhere).
+projects:
+  PRC:                           # Acme Pricing
+    teams:
+      product:  { people: [sam] }
+      backend:
+        people: [alex, omar]     # split backend work; alex stays question owner
+        repos:
+          - host: main
+            path: acme/pricing
+            default_branch: dev
+          - host: main
+            path: acme/pricing-admin
+            default_branch: main
+            release: false       # no dev→main release flow: the release agent skips it
+      data:
+        people: [kenji]
+        repos:
+          - host: oss
+            path: acme/warehouse
+            default_branch: main
+            only: pricing/       # this project's part of a shared repo
+      devops:   { people: [lena] }
+  ANL:                           # Acme Analytics (a data-only project)
+    approvers: [kenji, sam, alex]
+    question_owner: kenji
+    teams:
+      product: { people: [sam] }
+      data:
+        people: [kenji]
+        repos:
+          - host: oss
+            path: acme/warehouse
+            default_branch: main
+
+approvers: [sam, alex]           # may change priority; review rules (In Review → Ready for E2E, Done, Cancelled)
+question_owner: alex             # triage questions go to this person (a project may set its own)
+merge_to_main: [alex]            # the only person who merges to main (= production deploy)
+
+environments:
+  stage_api: CHANGE-ME           # e.g. https://stage.example.com/api
+  prod_api: CHANGE-ME

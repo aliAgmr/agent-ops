@@ -1,0 +1,18 @@
+# SSH local forwards to the read-only data sources
+# (infra/macos/tunnel.sh, portable). Settings in /etc/agent-ops/tunnel.env (TUNNEL_TARGET, TUNNEL_KEY,
+# TUNNEL_FORWARDS …); bootstrap.sh writes it from the same variables as macOS.
+[Unit]
+Description=agent-ops tunnel
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=agents
+Group=agents
+EnvironmentFile=/etc/agent-ops/tunnel.env
+ExecStart=/bin/bash /srv/agent-ops/infra/macos/tunnel.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

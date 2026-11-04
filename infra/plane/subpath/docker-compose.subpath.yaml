@@ -1,0 +1,28 @@
+# Layered over Plane's docker-compose.yaml by install.sh when PLANE_PREFIX is set in
+# plane.env: images from build.sh (UI under the prefix) and the matching proxy config.
+# PLANE_SUBPATH_TAG and PLANE_PREFIX come from plane.env.
+services:
+  web:
+    image: plane-web:${PLANE_SUBPATH_TAG}
+  admin:
+    image: plane-admin:${PLANE_SUBPATH_TAG}
+  space:
+    image: plane-space:${PLANE_SUBPATH_TAG}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000${PLANE_PREFIX}/spaces/"]
+  api:
+    image: plane-backend:${PLANE_SUBPATH_TAG}
+  worker:
+    image: plane-backend:${PLANE_SUBPATH_TAG}
+  beat-worker:
+    image: plane-backend:${PLANE_SUBPATH_TAG}
+  migrator:
+    image: plane-backend:${PLANE_SUBPATH_TAG}
+  proxy:
+    # host.docker.internal: the agent-mcp server on the host (Docker Desktop has it; Linux needs this).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      PLANE_PREFIX: ${PLANE_PREFIX}
+    volumes:
+      - ./Caddyfile.subpath:/etc/caddy/Caddyfile:ro

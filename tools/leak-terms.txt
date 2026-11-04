@@ -1,0 +1,38 @@
+# Terms that must never appear in this repository (case-insensitive regular expressions, one per
+# line). tools/leak-check.py fails CI on any match. They name the private deployment this project
+# was extracted from; keep the list when contributing, and add to it, never remove from it.
+digikala
+scalesops
+working[ _-]?capital
+dynamic[ _-]?pricing
+\bsbd\b
+mydigikala
+yavin
+abedini
+\bwcp\b
+aghamiri
+\bali\b
+\bahmad\b
+shaghayegh
+\bmina\b
+parham
+amirhosein
+mohammad
+bemani
+hafezi
+milani
+khoshzaban
+tafti
+bamian
+gftdcreator
+\bwc-[0-9]+
+\bdp-[0-9]+
+tehran
+jalali
+\bfarsi\b
+\bpersian\b
+\baban\b
+digikala_
+70b16236
+f903c772
+437c3de5

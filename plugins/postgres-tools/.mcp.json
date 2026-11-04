@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "postgres": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@microsoft/postgres-mcp",
+        "run"
+      ],
+      "env": {
+        "POSTGRES_MCP_CONNECTION_STRING": "${user_config.postgres_ro_url}",
+        "POSTGRES_MCP_PROFILE_NAME": "app-ro"
+      }
+    }
+  }
+}

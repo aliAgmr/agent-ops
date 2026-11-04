@@ -1,0 +1,12 @@
+{
+  "name": "role-product",
+  "displayName": "Role: Product",
+  "version": "0.1.0",
+  "description": "Write well-formed tasks, prioritise the board, review what triage sorted, approve reviews and answer product questions.",
+  "author": {
+    "name": "agent-ops contributors"
+  },
+  "dependencies": [
+    "core"
+  ]
+}

@@ -1,0 +1,7 @@
+# Layered over Plane's docker-compose.yaml by install.sh when PLANE_BI_PORT is set in plane.env:
+# publishes Plane's Postgres on this host's loopback only (127.0.0.1), for the read-only BI user
+# (infra/plane/bi/README.md). An optional bi-tunnel forwards it to a gateway.
+services:
+  plane-db:
+    ports:
+      - "127.0.0.1:${PLANE_BI_PORT}:5432"

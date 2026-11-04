@@ -1,0 +1,84 @@
+# Copy to people.yaml (git-ignored) and fill in: SETUP.md does this for you.
+# Used by triage (who to assign), agent-mcp (who a token belongs to) and notifications (who to message).
+# No passwords or tokens here: those go in each person's own plugin settings or the host's env file.
+
+people:
+  alex:
+    full_name: Alex Morgan
+    role: backend            # also tech lead; approver; question owner; merges to main
+    email: alex@example.com
+    telegram_username:       # without @
+    telegram_chat_id:        # private chat with the bot; infra/n8n/telegram-chat-ids.sh --write fills it
+    code_host_usernames: {}  # per code_hosts key in routing.yaml, e.g. {main: alex.m, oss: alexm}
+    figma_email:
+    timezone: UTC
+
+  sam:
+    full_name: Sam Rivera
+    role: product            # approver
+    email: sam@example.com
+    telegram_username:       # without @
+    telegram_chat_id:        # private chat with the bot; infra/n8n/telegram-chat-ids.sh --write fills it
+    code_host_usernames: {}  # per code_hosts key in routing.yaml, e.g. {main: alex.m, oss: alexm}
+    figma_email:
+    timezone: UTC
+
+  riya:
+    full_name: Riya Kapoor
+    role: design
+    email: riya@example.com
+    telegram_username:       # without @
+    telegram_chat_id:        # private chat with the bot; infra/n8n/telegram-chat-ids.sh --write fills it
+    code_host_usernames: {}  # per code_hosts key in routing.yaml, e.g. {main: alex.m, oss: alexm}
+    figma_email:
+    timezone: UTC
+
+  noor:
+    full_name: Noor Haddad
+    role: frontend
+    email: noor@example.com
+    telegram_username:       # without @
+    telegram_chat_id:        # private chat with the bot; infra/n8n/telegram-chat-ids.sh --write fills it
+    code_host_usernames: {}  # per code_hosts key in routing.yaml, e.g. {main: alex.m, oss: alexm}
+    figma_email:
+    timezone: UTC
+
+  kenji:
+    full_name: Kenji Sato
+    role: data            # lead of the ANL project
+    email: kenji@example.com
+    telegram_username:       # without @
+    telegram_chat_id:        # private chat with the bot; infra/n8n/telegram-chat-ids.sh --write fills it
+    code_host_usernames: {}  # per code_hosts key in routing.yaml, e.g. {main: alex.m, oss: alexm}
+    figma_email:
+    timezone: UTC
+
+  omar:
+    full_name: Omar Farouk
+    role: backend            # second backend on PRC
+    email: omar@example.com
+    telegram_username:       # without @
+    telegram_chat_id:        # private chat with the bot; infra/n8n/telegram-chat-ids.sh --write fills it
+    code_host_usernames: {}  # per code_hosts key in routing.yaml, e.g. {main: alex.m, oss: alexm}
+    figma_email:
+    timezone: UTC
+
+  lena:
+    full_name: Lena Fischer
+    role: devops
+    email: lena@example.com
+    telegram_username:       # without @
+    telegram_chat_id:        # private chat with the bot; infra/n8n/telegram-chat-ids.sh --write fills it
+    code_host_usernames: {}  # per code_hosts key in routing.yaml, e.g. {main: alex.m, oss: alexm}
+    figma_email:
+    timezone: UTC
+
+# Service identities (one bot user per service agent on the task board, so their changes are
+# attributable; see SETUP.md)
+service:
+  tracker_triage_bot:        # e.g. agents+triage@example.com
+  tracker_release_bot:
+  tracker_nightly_bot:
+  code_host_bots: {}         # per code_hosts key: the read-only bot account
+  telegram_group_chat_id:    # optional: a team group the bot may post in
+  telegram_topic_id:

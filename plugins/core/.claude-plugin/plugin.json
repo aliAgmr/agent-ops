@@ -1,0 +1,42 @@
+{
+  "name": "core",
+  "displayName": "Core (everyone)",
+  "version": "0.1.0",
+  "description": "Task protocol, handoffs, scope rules, the safety guard and action-journal hooks, the task board (Plane) MCP and the project Q&A server (agent-mcp). Every person and every service agent uses this.",
+  "author": {
+    "name": "agent-ops contributors"
+  },
+  "userConfig": {
+    "tracker_api_key": {
+      "type": "string",
+      "title": "Task board personal access token",
+      "description": "Your own token on the task board (Plane: Profile settings → Personal access tokens). Never a shared one.",
+      "sensitive": true,
+      "required": true
+    },
+    "tracker_base_url": {
+      "type": "string",
+      "title": "Task board URL",
+      "description": "Base URL of your Plane instance, e.g. https://plane.example.com",
+      "required": true
+    },
+    "tracker_workspace_slug": {
+      "type": "string",
+      "title": "Task board workspace",
+      "description": "The workspace part of the Plane URL.",
+      "required": true
+    },
+    "agent_mcp_url": {
+      "type": "string",
+      "title": "agent-mcp URL",
+      "description": "Base URL of your team's agent-mcp server without /mcp, e.g. https://agents.example.com/agent-mcp. Used for project Q&A, teammate messages and the action journal.",
+      "required": true
+    },
+    "role": {
+      "type": "string",
+      "title": "Your role",
+      "description": "One of: product, design, backend, frontend, data, devops. Decides which scope rules apply to you (devops also unlocks running non-production pipelines and CI jobs).",
+      "required": true
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "figma-tools",
+  "displayName": "Figma tools",
+  "version": "0.1.0",
+  "description": "Figma's hosted MCP server (read designs, frames and variables). Each person signs in to Figma themselves.",
+  "author": {
+    "name": "agent-ops contributors"
+  },
+  "dependencies": [
+    "core"
+  ]
+}

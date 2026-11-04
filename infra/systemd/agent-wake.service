@@ -1,0 +1,23 @@
+# Instant triage: n8n POSTs /wake/<agent> on every task-board change and this starts
+# agent@<agent>.service (infra/macos/wake.py, debounced). Runs as root only so it may call
+# `systemctl start`; it reads WAKE_TOKEN and nothing else from the env file. Port 8766.
+[Unit]
+Description=agent-ops wake (instant triage)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+EnvironmentFile=/etc/agent-ops/env
+Environment=AGENT_OPS_ENV=/etc/agent-ops/env
+Environment=WAKE_SUPERVISOR=systemd
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 /srv/agent-ops/infra/macos/wake.py
+Restart=always
+RestartSec=10
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

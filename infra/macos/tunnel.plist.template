@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Keeps infra/macos/tunnel.sh running (local forwards to the read-only data sources).
+     Rendered into ~/Library/LaunchAgents by install.sh when TUNNEL=true; __X__ are placeholders. -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>__PREFIX__.agent-tunnel</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/srv/agent-ops/infra/macos/tunnel.sh</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>TUNNEL_KEY</key><string>__KEY__</string>
+    <key>TUNNEL_TARGET</key><string>__TARGET__</string>
+    <key>TUNNEL_TARGET_PORT</key><string>__TARGET_PORT__</string>
+    <key>TUNNEL_JUMP</key><string>__JUMP__</string>
+    <key>TUNNEL_FORWARDS</key><string>__FORWARDS__</string>
+    <key>PATH</key><string>/usr/bin:/bin</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>5</integer>
+  <key>StandardOutPath</key><string>__HOME__/Library/Logs/agent-ops/tunnel/launchd.out</string>
+  <key>StandardErrorPath</key><string>__HOME__/Library/Logs/agent-ops/tunnel/launchd.err</string>
+</dict>
+</plist>

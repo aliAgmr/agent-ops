@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "clickhouse": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--with",
+        "mcp-clickhouse",
+        "--python",
+        "3.10",
+        "mcp-clickhouse"
+      ],
+      "env": {
+        "CLICKHOUSE_HOST": "${user_config.clickhouse_host}",
+        "CLICKHOUSE_PORT": "${user_config.clickhouse_port}",
+        "CLICKHOUSE_SECURE": "${user_config.clickhouse_secure}",
+        "CLICKHOUSE_USER": "${user_config.clickhouse_user}",
+        "CLICKHOUSE_PASSWORD": "${user_config.clickhouse_password}"
+      }
+    }
+  }
+}

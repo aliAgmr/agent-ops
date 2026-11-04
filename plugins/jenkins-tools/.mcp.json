@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "jenkins": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "${user_config.jenkins_mcp_url}",
+        "--allow-http",
+        "--header",
+        "Authorization:${JENKINS_AUTH}"
+      ],
+      "env": {
+        "JENKINS_AUTH": "${user_config.jenkins_auth}"
+      }
+    }
+  }
+}

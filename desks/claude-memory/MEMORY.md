@@ -1,0 +1,2 @@
+- [Structure changes go to the repo](agents-structure-changes-to-repo.md) — desks setup changes ship via a desks/* branch + merge request to the team's agent-ops repo
+- [Desks act for the owner](agents-desks-owner.md) — "the owner" in desk files is the person in workspace.local.md; their yes is the only approval

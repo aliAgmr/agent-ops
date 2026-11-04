@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# The action journal CLI: who changed what, and how to undo it (infra/journal/journal.py).
+#   journal blame BIL-123 | journal suspects WC mv.some_table | journal show --run <id>
+#   journal revert-plan --run <id>   then, by a person in a terminal: journal revert-apply <plan>
+exec python3 -I "$(cd "$(dirname "$0")" && pwd)/../journal/journal.py" "$@"

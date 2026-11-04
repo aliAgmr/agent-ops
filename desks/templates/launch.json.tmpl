@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "debug-backend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd \"$BACKEND_REPO/.claude/worktrees/debug-desk\" && $BACKEND_DEV_CMD"],
+      "port": 3000
+    },
+    {
+      "name": "debug-frontend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd \"$FRONTEND_REPO/.claude/worktrees/debug-desk\" && $FRONTEND_DEV_CMD"],
+      "port": 5173
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "name": "role-data",
+  "displayName": "Role: Data",
+  "version": "0.1.0",
+  "description": "Deliver the data the product needs: warehouse queries, tables and views, BI questions and data jobs, written as files and merge requests and applied by a person.",
+  "author": {
+    "name": "agent-ops contributors"
+  },
+  "dependencies": [
+    "core"
+  ]
+}

@@ -1,0 +1,39 @@
+# Projects the agent-mcp server (infra/agent-mcp) answers questions about. EXAMPLE content: SETUP.md
+# writes yours.
+# key: the short id callers pass to its tools (also the task board's project identifier).
+# tracker_project_id: the project's id on the task board; membership in it is what lets a caller ask
+# about it. repos: read-only clones on the agent host (`agent_repos_dir`, default /srv/repos), searched
+# with `git -C <path> grep|log|show|...`; `only` limits a repo to one folder. data_sources: which of
+# the answering agent's read-only MCP servers (service/agent-mcp/.mcp.json) apply to this project.
+projects:
+  BIL:
+    name: Acme Billing
+    tracker_project_id: 00000000-0000-4000-8000-000000000001
+    description: Acme Billing – invoicing backend and the customer dashboard.
+    repos:
+      - name: billing-backend
+        path: /srv/repos/billing-backend
+      - name: billing-frontend
+        path: /srv/repos/billing-frontend
+      - name: warehouse
+        path: /srv/repos/warehouse
+        only: billing/
+    data_sources: [tracker, code-host, postgres, clickhouse, metabase, jenkins]
+  PRC:
+    name: Acme Pricing
+    tracker_project_id: 00000000-0000-4000-8000-000000000002
+    description: Acme Pricing – the pricing rules engine and its admin panel.
+    repos:
+      - name: pricing
+        path: /srv/repos/pricing
+      - name: pricing-admin
+        path: /srv/repos/pricing-admin
+    data_sources: [tracker, code-host, clickhouse]
+  ANL:
+    name: Acme Analytics
+    tracker_project_id: 00000000-0000-4000-8000-000000000003
+    description: Acme Analytics – warehouse models and BI dashboards.
+    repos:
+      - name: warehouse
+        path: /srv/repos/warehouse
+    data_sources: [tracker, code-host, clickhouse, metabase, jenkins]

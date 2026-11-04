@@ -1,0 +1,21 @@
+{
+  "name": "github-tools",
+  "displayName": "GitHub tools",
+  "version": "0.1.0",
+  "description": "GitHub's official MCP server (pull requests, issues, Actions). Install it when your team's code lives on github.com. Merges, deployments and production workflow runs are blocked by the core guard.",
+  "author": {
+    "name": "agent-ops contributors"
+  },
+  "dependencies": [
+    "core"
+  ],
+  "userConfig": {
+    "github_token": {
+      "type": "string",
+      "title": "GitHub personal access token",
+      "description": "A fine-grained token for the team's repos: contents read, pull requests and issues read/write, actions read. Never admin.",
+      "sensitive": true,
+      "required": true
+    }
+  }
+}

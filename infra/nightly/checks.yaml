@@ -1,0 +1,61 @@
+# Nightly pass configuration (infra/nightly/checks.py and send.py). EXAMPLE for the sample "Acme"
+# team: SETUP.md writes yours.
+#
+# repos: nightly checks per repo (keys = the repo names under /srv/repos). Each repo is checked out
+# fresh from its code host (branch below) into the nightly cache and its commands run in a
+# throwaway Docker container (image) with only the repo mounted: no secrets, no host env. `setup`
+# runs once, then each check; a check fails on a non-zero exit. node_modules is kept between nights
+# so installs are quick. Every repo also gets: osv-scanner (lockfiles), gitleaks (commits in the
+# window) and semgrep (files changed in the window). `only`: scan just that folder (no tests).
+# `bugs_file`: a known-bugs list the agent reads with the E2E results.
+repos:
+  billing-backend:
+    branch: dev
+    image: oven/bun:1.3-slim
+    setup: bun install --frozen-lockfile --ignore-scripts
+    checks:
+      typecheck: bun run typecheck
+      lint: bun run lint
+      unit: bun test
+    bugs_file: tests/e2e/BUGS.md
+  billing-frontend:
+    branch: dev
+    image: oven/bun:1.3-slim
+    setup: bun install --frozen-lockfile --ignore-scripts
+    checks:
+      typecheck: bunx tsc -b --noEmit
+      lint: bun run lint
+  pricing:
+    branch: dev
+    image: node:22
+    setup: corepack enable && yarn install --immutable --mode=skip-build
+    checks:
+      lint: yarn lint
+      build: yarn run build
+      unit: yarn test --ci --maxWorkers=2
+  pricing-admin:
+    branch: main
+    image: oven/bun:1.3-slim
+    setup: bun install --frozen-lockfile --ignore-scripts
+    checks:
+      lint: bun run lint
+  warehouse:
+    branch: main
+    only: models/      # SQL only: scans, no tests
+
+# e2e (optional): the latest scheduled E2E pipeline (GitLab) or workflow run (GitHub) on a branch.
+e2e:
+  host: main                 # a routing.yaml code_hosts key
+  repo: acme/billing-backend
+  branch: dev
+  job_match: e2e             # jobs whose name contains this
+
+# send: where send.py delivers the morning messages. Each project's summary goes to a topic of the
+# team's Telegram group (people.yaml service.telegram_group_chat_id) or to one person's DM; the full
+# list goes to `dm_to` (a people.yaml key, or `question_owner` from routing.yaml).
+send:
+  dm_to: question_owner
+  projects:
+    BIL: { topic: 101 }
+    PRC: { topic: 102 }
+    ANL: { dm: kenji }

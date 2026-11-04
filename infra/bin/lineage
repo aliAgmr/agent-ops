@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Lineage CLI: which table feeds which view, API route, page and metric (infra/lineage/lineage.py).
+#   lineage impact analytics.orders | lineage upstream "GET /invoices/summary" | lineage files <changed paths> --impact
+#   lineage build (refresh the cache) | lineage check (hand-file names that no longer exist)
+exec python3 -I "$(cd "$(dirname "$0")" && pwd)/../lineage/lineage.py" "$@"

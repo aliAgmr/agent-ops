@@ -1,0 +1,45 @@
+{
+  "name": "clickhouse-tools",
+  "displayName": "ClickHouse tools (read-only)",
+  "version": "0.1.0",
+  "description": "ClickHouse MCP server with a read-only user: list databases and tables, run SELECT queries. Writes are blocked by the core guard and must be impossible for the user you give it (readonly = 1).",
+  "author": {
+    "name": "agent-ops contributors"
+  },
+  "dependencies": [
+    "core"
+  ],
+  "userConfig": {
+    "clickhouse_host": {
+      "type": "string",
+      "title": "ClickHouse host",
+      "description": "e.g. ch.example.com",
+      "required": true
+    },
+    "clickhouse_port": {
+      "type": "string",
+      "title": "ClickHouse HTTP(S) port",
+      "description": "Usually 8443 (secure) or 8123.",
+      "default": "8443"
+    },
+    "clickhouse_secure": {
+      "type": "string",
+      "title": "ClickHouse TLS",
+      "description": "true or false",
+      "default": "true"
+    },
+    "clickhouse_user": {
+      "type": "string",
+      "title": "ClickHouse read-only user",
+      "description": "A user with readonly = 1.",
+      "required": true
+    },
+    "clickhouse_password": {
+      "type": "string",
+      "title": "ClickHouse password",
+      "description": "Password of the read-only user.",
+      "sensitive": true,
+      "required": true
+    }
+  }
+}

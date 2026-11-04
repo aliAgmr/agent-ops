@@ -1,0 +1,34 @@
+# Where the lineage scanner (infra/lineage/lineage.py) looks. Copy to knowledge/lineage-sources.yaml
+# and edit (SETUP.md does this for you); this example matches the example team's repos.
+# Each source: a `type` (a built-in scanner or a module in infra/lineage/scanners/) and its
+# settings. Repos are folders under AGENT_REPOS_DIR (default /srv/repos) or absolute paths.
+# Keep values on one line: `key: value` or `key: [a, b]`.
+
+sources:
+  # Pipeline SQL: each file builds the table it CREATEs/INSERTs into (or <default_db>.<file name>).
+  - type: sql_dir
+    repo: warehouse
+    path: models
+    glob: "**/*.sql"
+    default_db: analytics
+    skip: [zz_*, "*_old"]
+    name: warehouse
+
+  # Views that live only in the warehouse: read from ClickHouse's catalog (read-only user, CH_RO_*).
+  - type: clickhouse_views
+    databases: [analytics, staging]
+
+  # API routes → the warehouse tables/views their SQL reads (an Elysia backend).
+  - type: elysia_routes
+    repo: billing-backend
+    src: src
+    routers: src/routers
+    databases: [analytics]
+
+  # Pages → the API routes they call (a React Router frontend).
+  - type: react_router
+    repo: billing-frontend
+    app: src/App.tsx
+    route_files: [src/routes/wrappers.tsx]
+    alias: "@/"
+    api_calls: [apiRequest, fetch]

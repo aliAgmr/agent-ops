@@ -1,0 +1,18 @@
+# SSH remote forward that publishes a local service on a gateway
+# (infra/macos/publish-tunnel.sh, portable). Settings in /etc/agent-ops/publish-tunnel.env (TUNNEL_TARGET, TUNNEL_KEY,
+# PUBLISH_PORT, PUBLISH_LOCAL_PORT, PUBLISH_BIND …); bootstrap.sh writes it from the same variables as macOS.
+[Unit]
+Description=agent-ops publish-tunnel
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=agents
+Group=agents
+EnvironmentFile=/etc/agent-ops/publish-tunnel.env
+ExecStart=/bin/bash /srv/agent-ops/infra/macos/publish-tunnel.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

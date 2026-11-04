@@ -1,0 +1,12 @@
+# Rendered by infra/bootstrap.sh into /etc/systemd/system/nightly-send.timer when NIGHTLY=true.
+# __ONCALENDAR__ comes from NIGHTLY_SEND_ONCALENDAR (systemd OnCalendar syntax, the host's local time).
+[Unit]
+Description=agent-ops nightly messages
+
+[Timer]
+OnCalendar=__ONCALENDAR__
+Persistent=false
+Unit=nightly-send.service
+
+[Install]
+WantedBy=timers.target
