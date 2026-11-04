@@ -31,7 +31,7 @@ def warn(msg):
 
 
 def git(*args, timeout=30):
-    return subprocess.run(["git", "-C", str(C.repo_root()), *args], capture_output=True, text=True, timeout=timeout)
+    return subprocess.run(["git", "-C", str(C.repo_root()), *args], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout)
 
 
 def head() -> str:
@@ -46,7 +46,7 @@ def people() -> dict:
     lines = []
     for name in ("people.yaml", "people.template.yaml"):
         try:
-            lines = (C.repo_root() / name).read_text().splitlines()
+            lines = (C.repo_root() / name).read_text(encoding="utf-8").splitlines()
             break
         except OSError:
             continue
@@ -233,7 +233,7 @@ def session_notes(cfg) -> str:
     script = C.repo_root() / "plugins" / "core" / "scripts" / "session-notes.sh"
     try:
         env = {**os.environ, "CLAUDE_PLUGIN_DATA": str(C.state_dir() / "data" / "core"), **C.hook_env(cfg)}
-        r = subprocess.run([bash, str(script)], env=env, capture_output=True, text=True, timeout=25)
+        r = subprocess.run([bash, str(script)], env=env, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=25)
         return r.stdout.strip() if r.returncode == 0 else ""
     except Exception:  # noqa: BLE001 - a session must start anyway
         return ""
@@ -254,7 +254,7 @@ def handshake(argv, env, timeout=150):
         "protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "agent-ops-check", "version": "1"}}}
     try:
         p = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-                             env=env, text=True)
+                             env=env, text=True, encoding="utf-8", errors="replace")
     except OSError as e:
         return False, str(e)
     try:
@@ -322,14 +322,14 @@ def cmd_check(a):
     if "codex" in cfg.get("clients", []):
         import tomllib
         try:
-            t = tomllib.loads((C.home() / ".codex" / "config.toml").read_text())
+            t = tomllib.loads((C.home() / ".codex" / "config.toml").read_text(encoding="utf-8"))
             line(all(n in t.get("mcp_servers", {}) for n in cfg.get("owned", {}).get("codex_servers", [])), "codex config.toml")
         except (OSError, tomllib.TOMLDecodeError) as e:
             line(False, "codex config.toml", str(e))
     if "kimi" in cfg.get("clients", []):
         import tomllib
         try:
-            t = tomllib.loads((C.kimi_home() / "config.toml").read_text())
+            t = tomllib.loads((C.kimi_home() / "config.toml").read_text(encoding="utf-8"))
             ours = [h for h in t.get("hooks", []) if "agent_ops" in h.get("command", "")]
             denies = [r for r in t.get("permission", {}).get("rules", []) if r.get("decision") == "deny"]
             line(any(h.get("event") == "PreToolUse" and "guard" in h["command"] for h in ours) and bool(denies),
@@ -422,5 +422,10 @@ def main():
     s.add_argument("--client", choices=C.CLIENTS, required=True)
     s.add_argument("--phase", choices=["pre", "post"], required=True)
     s.set_defaults(fn=lambda a: G.run_journal(a.client, a.phase))
+    # Windows consoles default to a legacy code page (cp1252…) that can't print "→" and friends.
+    # Hook input (stdin) is JSON in UTF-8 too.
+    for stream in (sys.stdin, sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     a = ap.parse_args()
     sys.exit(a.fn(a) or 0)

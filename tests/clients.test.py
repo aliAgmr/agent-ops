@@ -25,25 +25,25 @@ def ok(cond, label, extra=None):
 
 def run(*args, stdin=""):
     return subprocess.run([sys.executable, "-m", "agent_ops", *args], input=stdin, capture_output=True,
-                          text=True, env=ENV, cwd=ROOT / "clients")
+                          text=True, encoding="utf-8", errors="replace", env=ENV, cwd=ROOT / "clients")
 
 
 # ---- a person who already has their own Cursor/Codex/Kimi config ----------------------------------
 (T / ".cursor").mkdir()
-(T / ".cursor" / "mcp.json").write_text(json.dumps({"mcpServers": {"mine": {"command": "x"}, "figma": {"url": "https://other"}}}))
-(T / ".cursor" / "hooks.json").write_text(json.dumps({"version": 1, "hooks": {"stop": [{"command": "./mine.sh"}]}}))
+(T / ".cursor" / "mcp.json").write_text(json.dumps({"mcpServers": {"mine": {"command": "x"}, "figma": {"url": "https://other"}}}), encoding="utf-8")
+(T / ".cursor" / "hooks.json").write_text(json.dumps({"version": 1, "hooks": {"stop": [{"command": "./mine.sh"}]}}), encoding="utf-8")
 (T / ".codex").mkdir()
-(T / ".codex" / "config.toml").write_text('model = "x"\n\n[mcp_servers.myown]\ncommand = "y"\n')
-(T / ".codex" / "AGENTS.md").write_text("# my notes\n")
+(T / ".codex" / "config.toml").write_text('model = "x"\n\n[mcp_servers.myown]\ncommand = "y"\n', encoding="utf-8")
+(T / ".codex" / "AGENTS.md").write_text("# my notes\n", encoding="utf-8")
 (T / ".agents" / "skills" / "handoff").mkdir(parents=True)          # someone else's skill, same name
-(T / ".agents" / "skills" / "handoff" / "SKILL.md").write_text("---\nname: handoff\ndescription: mine\n---\n")
+(T / ".agents" / "skills" / "handoff" / "SKILL.md").write_text("---\nname: handoff\ndescription: mine\n---\n", encoding="utf-8")
 K = T / ".kimi-code"
 K.mkdir()
-(K / "mcp.json").write_text(json.dumps({"mcpServers": {"kmine": {"command": "k"}}}))
+(K / "mcp.json").write_text(json.dumps({"mcpServers": {"kmine": {"command": "k"}}}), encoding="utf-8")
 (K / "config.toml").write_text('default_model = "k2"\n\n[[hooks]]\nevent = "Stop"\ncommand = "./my-stop.sh"\n\n'
-                               '[[permission.rules]]\ndecision = "allow"\npattern = "Read"\n')
-(K / "AGENTS.md").write_text("# kimi notes\n")
-(T / "secrets.json").write_text(json.dumps({"core.tracker_api_key": "TRACKER-SECRET", "jenkins-tools.jenkins_auth": "Basic JSECRET"}))
+                               '[[permission.rules]]\ndecision = "allow"\npattern = "Read"\n', encoding="utf-8")
+(K / "AGENTS.md").write_text("# kimi notes\n", encoding="utf-8")
+(T / "secrets.json").write_text(json.dumps({"core.tracker_api_key": "TRACKER-SECRET", "jenkins-tools.jenkins_auth": "Basic JSECRET"}), encoding="utf-8")
 
 r = run("setup", "--client", "cursor", "--client", "codex", "--client", "kimi", "--role", "backend", "--person", "alex",
         "--tools", "gitlab,postgres,clickhouse", "--tool", "jenkins-tools", "--tools", "metabase,figma",
@@ -52,17 +52,17 @@ r = run("setup", "--client", "cursor", "--client", "codex", "--client", "kimi", 
         "--set", "clickhouse-tools.clickhouse_host=localhost", "--set", "jenkins-tools.jenkins_mcp_url=http://localhost:3030/mcp-server/mcp",
         "--non-interactive")
 ok(r.returncode == 0, "setup runs", r.stderr)
-cfg = json.loads((T / ".agent-ops" / "config.json").read_text())
+cfg = json.loads((T / ".agent-ops" / "config.json").read_text(encoding="utf-8"))
 ok(cfg["tools"] == ["clickhouse-tools", "figma-tools", "gitlab-tools", "jenkins-tools", "metabase-tools", "postgres-tools"],
    "tool plugins from --tools (short names, commas) and --tool", cfg.get("tools"))
 ok("'figma' already exists" in r.stderr and "skill handoff" in r.stderr, "conflicts are reported, not overwritten", r.stderr)
 
-cm = json.loads((T / ".cursor" / "mcp.json").read_text())["mcpServers"]
+cm = json.loads((T / ".cursor" / "mcp.json").read_text(encoding="utf-8"))["mcpServers"]
 ok(cm["mine"] == {"command": "x"} and cm["figma"] == {"url": "https://other"}, "Cursor: own servers kept", cm)
 ok({"plane", "agent-mcp", "gitlab", "postgres", "clickhouse", "jenkins", "metabase"} <= set(cm), "Cursor: role servers added", list(cm))
 ok(cm["plane"]["args"][-2:] == ["mcp", "core/plane"], "Cursor: servers start through the launcher")
-ok("SECRET" not in (T / ".cursor" / "mcp.json").read_text(), "Cursor: no secret in mcp.json")
-ch = json.loads((T / ".cursor" / "hooks.json").read_text())["hooks"]
+ok("SECRET" not in (T / ".cursor" / "mcp.json").read_text(encoding="utf-8"), "Cursor: no secret in mcp.json")
+ch = json.loads((T / ".cursor" / "hooks.json").read_text(encoding="utf-8"))["hooks"]
 ok(ch["stop"] == [{"command": "./mine.sh"}], "Cursor: own hooks kept")
 ok(all(any("guard --client cursor" in h["command"] and h.get("failClosed") for h in ch[e])
        for e in ("beforeShellExecution", "beforeMCPExecution")), "Cursor: guard hooks fail closed", ch)
@@ -71,32 +71,32 @@ ok(all(any("journal --client cursor --phase " + ph in h["command"] and not h.get
        for e, ph in (("beforeShellExecution", "pre"), ("beforeMCPExecution", "pre"),
                      ("afterShellExecution", "post"), ("afterMCPExecution", "post"))),
    "Cursor: journal hooks before and after every call, never blocking", ch)
-rule = (T / ".cursor" / "plugins" / "local" / "agent-ops" / "rules" / "agent-ops.mdc").read_text()
+rule = (T / ".cursor" / "plugins" / "local" / "agent-ops" / "rules" / "agent-ops.mdc").read_text(encoding="utf-8")
 ok("alwaysApply: true" in rule and "Alex Morgan" in rule and "[agent:alex-backend]" in rule, "Cursor: always-on rule", rule[:400])
 
-text = (T / ".codex" / "config.toml").read_text()
+text = (T / ".codex" / "config.toml").read_text(encoding="utf-8")
 t = tomllib.loads(text)
 ok(t["model"] == "x" and t["mcp_servers"]["myown"] == {"command": "y"}, "Codex: own config kept")
 ok({"plane", "agent-mcp", "figma", "gitlab"} <= set(t["mcp_servers"]), "Codex: servers added", list(t["mcp_servers"]))
 ok(t["mcp_servers"]["figma"] == {"url": "https://mcp.figma.com/mcp"}, "Codex: Figma as a remote URL server (own login)")
 ok("SECRET" not in text, "Codex: no secret in config.toml")
-xh = json.loads((T / ".codex" / "hooks.json").read_text())["hooks"]
+xh = json.loads((T / ".codex" / "hooks.json").read_text(encoding="utf-8"))["hooks"]
 ok(any("guard --client codex" in h["command"] for g in xh["PreToolUse"] for h in g["hooks"]), "Codex: guard hook", xh)
 ok(any("mcp__" in g["matcher"] and "Bash" in g["matcher"] for g in xh["PreToolUse"]), "Codex: guard covers shell and MCP")
 ok(any("journal --client codex --phase pre" in h["command"] for g in xh["PreToolUse"] for h in g["hooks"]) and
    any("journal --client codex --phase post" in h["command"] for g in xh["PostToolUse"] for h in g["hooks"]),
    "Codex: journal hooks before and after", xh)
-agents = (T / ".codex" / "AGENTS.md").read_text()
+agents = (T / ".codex" / "AGENTS.md").read_text(encoding="utf-8")
 ok(agents.startswith("# my notes") and "# Team rules (agent-ops)" in agents, "Codex: AGENTS.md block after own notes")
 
 # Kimi Code
-km = json.loads((K / "mcp.json").read_text())["mcpServers"]
+km = json.loads((K / "mcp.json").read_text(encoding="utf-8"))["mcpServers"]
 ok(km["kmine"] == {"command": "k"}, "Kimi: own servers kept", km)
 ok({"plane", "agent-mcp", "gitlab", "postgres", "clickhouse", "jenkins", "metabase"} <= set(km), "Kimi: servers added", list(km))
 ok(km["plane"]["args"][-2:] == ["mcp", "core/plane"] and km["plane"]["startupTimeoutMs"] == 120000, "Kimi: servers start through the launcher")
 ok(km["figma"] == {"url": "https://mcp.figma.com/mcp"}, "Kimi: Figma as a remote URL server (own login)")
-ok("SECRET" not in (K / "mcp.json").read_text(), "Kimi: no secret in mcp.json")
-ktext = (K / "config.toml").read_text()
+ok("SECRET" not in (K / "mcp.json").read_text(encoding="utf-8"), "Kimi: no secret in mcp.json")
+ktext = (K / "config.toml").read_text(encoding="utf-8")
 kt = tomllib.loads(ktext)
 ok(kt["default_model"] == "k2" and any(h.get("command") == "./my-stop.sh" for h in kt["hooks"]), "Kimi: own config and hooks kept", kt)
 ours = [h for h in kt["hooks"] if "agent_ops" in h["command"]]
@@ -112,31 +112,31 @@ ok({"mcp__*__merge_merge_request", "mcp__*__merge_pull_request", "mcp__*__postgr
     "mcp__*__triggerBuild"} <= set(deny), "Kimi: static deny rules as a second layer", deny)
 ok(kt["permission"]["rules"][0] == {"decision": "allow", "pattern": "Read"}, "Kimi: own permission rules kept, first")
 ok("SECRET" not in ktext, "Kimi: no secret in config.toml")
-kag = (K / "AGENTS.md").read_text()
+kag = (K / "AGENTS.md").read_text(encoding="utf-8")
 ok(kag.startswith("# kimi notes") and "# Team rules (agent-ops)" in kag, "Kimi: AGENTS.md block after own notes")
 
 sk = T / ".agents" / "skills"
 ok((sk / "task-protocol" / "SKILL.md").exists() and (sk / "api-contract" / "SKILL.md").exists(), "skills installed")
-ok((sk / "handoff" / "SKILL.md").read_text().endswith("description: mine\n---\n"), "someone else's skill left alone")
-rv = (sk / "reviewer" / "SKILL.md").read_text() if (sk / "reviewer" / "SKILL.md").exists() else ""
+ok((sk / "handoff" / "SKILL.md").read_text(encoding="utf-8").endswith("description: mine\n---\n"), "someone else's skill left alone")
+rv = (sk / "reviewer" / "SKILL.md").read_text(encoding="utf-8") if (sk / "reviewer" / "SKILL.md").exists() else ""
 ok(rv.startswith("---\nname: reviewer") and "tools:" not in rv, "Claude subagent `reviewer` installed as a skill", rv[:200])
 ok(not (sk / "fe-integration").exists(), "only this role's skills")
 
 # idempotent
-before = {p: p.read_text() for p in [T / ".cursor" / "mcp.json", T / ".cursor" / "hooks.json", T / ".codex" / "config.toml",
+before = {p: p.read_text(encoding="utf-8") for p in [T / ".cursor" / "mcp.json", T / ".cursor" / "hooks.json", T / ".codex" / "config.toml",
                                        T / ".codex" / "hooks.json", T / ".codex" / "AGENTS.md",
                                        K / "mcp.json", K / "config.toml", K / "AGENTS.md"]}
 r = run("setup", "--non-interactive")
-ok(r.returncode == 0 and all(p.read_text() == v for p, v in before.items()), "second setup changes nothing", r.stderr)
+ok(r.returncode == 0 and all(p.read_text(encoding="utf-8") == v for p, v in before.items()), "second setup changes nothing", r.stderr)
 
 # role and tools change: old skills and servers go, new ones come
 r = run("setup", "--role", "frontend", "--tools", "gitlab,figma", "--non-interactive")
-cm = json.loads((T / ".cursor" / "mcp.json").read_text())["mcpServers"]
+cm = json.loads((T / ".cursor" / "mcp.json").read_text(encoding="utf-8"))["mcpServers"]
 ok("postgres" not in cm and "gitlab" in cm and "mine" in cm, "tools change: servers follow the tools", list(cm))
 ok((sk / "fe-integration").exists() and not (sk / "api-contract").exists(), "role change: skills follow the role")
-t = tomllib.loads((T / ".codex" / "config.toml").read_text())
+t = tomllib.loads((T / ".codex" / "config.toml").read_text(encoding="utf-8"))
 ok("postgres" not in t["mcp_servers"] and "myown" in t["mcp_servers"], "tools change: Codex servers follow")
-km = json.loads((K / "mcp.json").read_text())["mcpServers"]
+km = json.loads((K / "mcp.json").read_text(encoding="utf-8"))["mcpServers"]
 ok("postgres" not in km and "kmine" in km, "tools change: Kimi servers follow", list(km))
 r = run("setup", "--tools", "nosuch", "--non-interactive")
 ok(r.returncode != 0 and "unknown tool plugin" in (r.stderr + r.stdout), "unknown tool plugin refused", r.stderr)
@@ -209,7 +209,7 @@ ok(kimi({"tool_name": "mcp__postgres__postgres_mcp_modify", "tool_input": {}})[0
 run("setup", "--role", "devops", "--non-interactive")
 ok(codex({"tool_name": "mcp__jenkins__triggerBuild", "tool_input": {"jobFullName": "billing-backend-stage"}})[0] == 0, "codex: devops may run a stage job")
 ok(codex({"tool_name": "mcp__jenkins__triggerBuild", "tool_input": {"jobFullName": "billing-backend-prod"}})[0] == 2, "codex: devops can't run prod")
-kd = [r["pattern"] for r in tomllib.loads((K / "config.toml").read_text())["permission"]["rules"] if r["decision"] == "deny"]
+kd = [r["pattern"] for r in tomllib.loads((K / "config.toml").read_text(encoding="utf-8"))["permission"]["rules"] if r["decision"] == "deny"]
 ok("mcp__*__triggerBuild" not in kd and "mcp__*__merge_merge_request" in kd, "kimi: devops keeps CI runs (guard checks the target), merges still denied", kd)
 run("setup", "--role", "backend", "--non-interactive")
 ok(codex({"tool_name": "mcp__jenkins__triggerBuild", "tool_input": {"jobFullName": "billing-backend-stage"}})[0] == 2, "codex: backend can't run jobs")
@@ -227,18 +227,18 @@ ok(r.returncode == 0, "update hook (kimi) never fails", r.stderr)
 
 # ---- uninstall ---------------------------------------------------------------------------------------
 run("uninstall", "--client", "cursor")
-cm = json.loads((T / ".cursor" / "mcp.json").read_text())["mcpServers"]
-ch = json.loads((T / ".cursor" / "hooks.json").read_text())["hooks"]
+cm = json.loads((T / ".cursor" / "mcp.json").read_text(encoding="utf-8"))["mcpServers"]
+ch = json.loads((T / ".cursor" / "hooks.json").read_text(encoding="utf-8"))["hooks"]
 ok(set(cm) == {"mine", "figma"} and set(ch) == {"stop"}, "uninstall cursor: only ours removed", (cm, ch))
 ok((sk / "task-protocol").exists(), "uninstall one client: skills stay for the other")
 run("uninstall", "--client", "kimi")
-km = json.loads((K / "mcp.json").read_text())["mcpServers"]
-kt = tomllib.loads((K / "config.toml").read_text())
+km = json.loads((K / "mcp.json").read_text(encoding="utf-8"))["mcpServers"]
+kt = tomllib.loads((K / "config.toml").read_text(encoding="utf-8"))
 ok(set(km) == {"kmine"} and kt["hooks"] == [{"event": "Stop", "command": "./my-stop.sh"}]
-   and kt["permission"]["rules"] == [{"decision": "allow", "pattern": "Read"}] and (K / "AGENTS.md").read_text() == "# kimi notes\n",
+   and kt["permission"]["rules"] == [{"decision": "allow", "pattern": "Read"}] and (K / "AGENTS.md").read_text(encoding="utf-8") == "# kimi notes\n",
    "uninstall kimi: back to own config", (km, kt))
 run("uninstall")
-t = tomllib.loads((T / ".codex" / "config.toml").read_text())
-ok(set(t["mcp_servers"]) == {"myown"} and (T / ".codex" / "AGENTS.md").read_text() == "# my notes\n", "uninstall codex: back to own config")
+t = tomllib.loads((T / ".codex" / "config.toml").read_text(encoding="utf-8"))
+ok(set(t["mcp_servers"]) == {"myown"} and (T / ".codex" / "AGENTS.md").read_text(encoding="utf-8") == "# my notes\n", "uninstall codex: back to own config")
 ok(not (sk / "task-protocol").exists() and (sk / "handoff").exists(), "uninstall all: our skills removed, theirs kept")
 sys.exit(fail)

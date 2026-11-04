@@ -61,7 +61,7 @@ def verdict(event: dict, role: str):
         return False, "agent-ops guard is not installed correctly (bash or guard.sh missing); run `agent-ops check`"
     try:
         r = subprocess.run([bash, str(guard), "--role", role or ""], input=json.dumps(event),
-                           capture_output=True, text=True, timeout=20)
+                           capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=20)
     except (OSError, subprocess.TimeoutExpired) as e:
         return False, f"agent-ops guard failed to run ({e.__class__.__name__}); blocked to be safe"
     if r.returncode == 2:
@@ -124,7 +124,7 @@ def run_journal(client: str, phase: str) -> int:
                 if mcp_url:   # the journal endpoint sits next to agent-mcp's /mcp
                     env.setdefault("AGENT_JOURNAL_URL", journal_url(str(mcp_url)))
                 subprocess.run([bash, str(script), phase], input=json.dumps(payload), env=env,
-                               capture_output=True, text=True, timeout=15)
+                               capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=15)
     except Exception:  # noqa: BLE001 - the journal must never get in the way of a tool call
         pass
     if client == "cursor" and phase == "pre":
