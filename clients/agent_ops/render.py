@@ -37,16 +37,16 @@ def backup(path: Path):
 
 def write(path: Path, text: str):
     path.parent.mkdir(parents=True, exist_ok=True)
-    if path.exists() and path.read_text() == text:
+    if path.exists() and path.read_text(encoding="utf-8") == text:
         return False
     backup(path)
-    path.write_text(text)
+    path.write_text(text, encoding="utf-8")
     return True
 
 
 def read_json(path: Path, default):
     try:
-        return json.loads(path.read_text())
+        return json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError:
         return default
     except ValueError:
@@ -126,9 +126,9 @@ def sync_skills(plugins: list, warn) -> list:
             shutil.copytree(src, dst)
         else:  # a Claude subagent file → a skill: same name/description front matter, `tools` dropped
             dst.mkdir(parents=True)
-            text = "\n".join(l for l in src.read_text().splitlines() if not l.startswith("tools:")) + "\n"
-            (dst / "SKILL.md").write_text(text)
-        (dst / MARK).write_text("Installed by agent-ops setup from the team's plugins; replaced on update.\n")
+            text = "\n".join(l for l in src.read_text(encoding="utf-8").splitlines() if not l.startswith("tools:")) + "\n"
+            (dst / "SKILL.md").write_text(text, encoding="utf-8")
+        (dst / MARK).write_text("Installed by agent-ops setup from the team's plugins; replaced on update.\n", encoding="utf-8")
     for d in root.iterdir():   # skills a previous role/version had but this one doesn't
         if d.is_dir() and (d / MARK).exists() and d.name not in wanted:
             shutil.rmtree(d)
@@ -220,7 +220,7 @@ def replace_block(text: str, begin: str, end: str, block: str) -> str:
 def codex(cfg: dict, plugins: list, warn, owned: dict) -> dict:
     base = C.home() / ".codex"
     path = base / "config.toml"
-    text = path.read_text() if path.exists() else ""
+    text = path.read_text(encoding="utf-8") if path.exists() else ""
     outside = replace_block(text, BEGIN, END, "")
     lines, new_owned = [], []
     for name, entry in servers(cfg, plugins).items():
@@ -267,7 +267,7 @@ def codex(cfg: dict, plugins: list, warn, owned: dict) -> dict:
     write(path, json.dumps(data, indent=2) + "\n")
     # Always-on rules
     path = base / "AGENTS.md"
-    text = path.read_text() if path.exists() else ""
+    text = path.read_text(encoding="utf-8") if path.exists() else ""
     write(path, replace_block(text, MD_BEGIN, MD_END, rules_text(cfg, plugins)))
     return {"codex_servers": new_owned}
 
@@ -277,7 +277,7 @@ def uninstall_codex(owned: dict):
     for name, (b, e) in (("config.toml", (BEGIN, END)), ("AGENTS.md", (MD_BEGIN, MD_END))):
         path = base / name
         if path.exists():
-            write(path, replace_block(path.read_text(), b, e, ""))
+            write(path, replace_block(path.read_text(encoding="utf-8"), b, e, ""))
     path = base / "hooks.json"
     if path.exists():
         data = read_json(path, {})
@@ -335,7 +335,7 @@ def kimi(cfg: dict, plugins: list, warn, owned: dict) -> dict:
     # Hooks and deny rules: a managed block at the end of config.toml. [[hooks]] may only carry
     # event, matcher, command and timeout (other keys stop the file from loading).
     path = base / "config.toml"
-    text = path.read_text() if path.exists() else ""
+    text = path.read_text(encoding="utf-8") if path.exists() else ""
     lines = ["# Guard: blocks a tool call that breaks the team's hard rules (exit 2 = block).",
              "[[hooks]]", 'event = "PreToolUse"', f"matcher = {toml_str(KIMI_MATCHER)}",
              f"command = {toml_str(hook_cmd('kimi', 'guard', '--client', 'kimi'))}", "timeout = 30", "",
@@ -354,7 +354,7 @@ def kimi(cfg: dict, plugins: list, warn, owned: dict) -> dict:
     write(path, replace_block(text, BEGIN, END, "\n".join(lines)))
     # Always-on rules: Kimi's global instructions file.
     path = base / "AGENTS.md"
-    text = path.read_text() if path.exists() else ""
+    text = path.read_text(encoding="utf-8") if path.exists() else ""
     write(path, replace_block(text, MD_BEGIN, MD_END, rules_text(cfg, plugins)))
     return {"kimi_servers": new_owned}
 
@@ -364,7 +364,7 @@ def uninstall_kimi(owned: dict):
     for name, (b, e) in (("config.toml", (BEGIN, END)), ("AGENTS.md", (MD_BEGIN, MD_END))):
         path = base / name
         if path.exists():
-            write(path, replace_block(path.read_text(), b, e, ""))
+            write(path, replace_block(path.read_text(encoding="utf-8"), b, e, ""))
     path = base / "mcp.json"
     if path.exists():
         data = read_json(path, {})

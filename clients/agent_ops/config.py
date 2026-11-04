@@ -40,7 +40,7 @@ def config_path() -> Path:
 
 def load_config() -> dict:
     try:
-        return json.loads(config_path().read_text())
+        return json.loads(config_path().read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {}
 
@@ -48,7 +48,7 @@ def load_config() -> dict:
 def save_config(cfg: dict) -> None:
     state_dir().mkdir(parents=True, exist_ok=True)
     tmp = config_path().with_suffix(".tmp")
-    tmp.write_text(json.dumps(cfg, indent=2, sort_keys=True) + "\n")
+    tmp.write_text(json.dumps(cfg, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     os.replace(tmp, config_path())
 
 
@@ -63,7 +63,7 @@ def get_secret(name: str):
     f = _file_store()
     if f:
         try:
-            return json.loads(f.read_text()).get(name)
+            return json.loads(f.read_text(encoding="utf-8")).get(name)
         except (OSError, ValueError):
             return None
     import keyring
@@ -73,9 +73,9 @@ def get_secret(name: str):
 def set_secret(name: str, value: str) -> None:
     f = _file_store()
     if f:
-        data = json.loads(f.read_text()) if f.exists() else {}
+        data = json.loads(f.read_text(encoding="utf-8")) if f.exists() else {}
         data[name] = value
-        f.write_text(json.dumps(data))
+        f.write_text(json.dumps(data), encoding="utf-8")
         return
     import keyring
     keyring.set_password(SECRET_SERVICE, name, value)
@@ -85,9 +85,9 @@ def delete_secret(name: str) -> None:
     f = _file_store()
     if f:
         if f.exists():
-            data = json.loads(f.read_text())
+            data = json.loads(f.read_text(encoding="utf-8"))
             data.pop(name, None)
-            f.write_text(json.dumps(data))
+            f.write_text(json.dumps(data), encoding="utf-8")
         return
     import keyring
     try:
@@ -100,13 +100,13 @@ def delete_secret(name: str) -> None:
 class Plugin:
     def __init__(self, root: Path):
         self.root = root
-        meta = json.loads((root / ".claude-plugin" / "plugin.json").read_text())
+        meta = json.loads((root / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
         self.name = meta["name"]
         self.version = meta.get("version", "0")
         self.deps = meta.get("dependencies", [])
         self.options = meta.get("userConfig", {})
         mcp = root / ".mcp.json"
-        self.servers = json.loads(mcp.read_text()).get("mcpServers", {}) if mcp.exists() else {}
+        self.servers = json.loads(mcp.read_text(encoding="utf-8")).get("mcpServers", {}) if mcp.exists() else {}
         sk = root / "skills"
         self.skills = sorted(p for p in sk.iterdir() if (p / "SKILL.md").exists()) if sk.exists() else []
         # Claude Code subagents (agents/*.md); Cursor/Codex/Kimi get them as skills of the same name.
