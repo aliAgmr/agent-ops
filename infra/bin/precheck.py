@@ -3,11 +3,12 @@
 ticks cost nothing (the agents share a plan with usage limits). Talks to the task board and the code
 host through infra/adapters; no model, no writes.
 
-  precheck.py <triage|analyst|release|nightly> <since-iso8601>
+  precheck.py <triage|analyst|release|nightly|jenkins-watch> <since-iso8601>
 
 Exit 0 = work to do (prints "work: <board>: <why>"), 1 = idle, 3 = the check itself failed (a
 missing setting or an API error; run-agent.sh then runs Claude anyway: a broken check must never
-stop the agents). nightly is always work: nightly.sh schedules it.
+stop the agents). nightly is always work: nightly.sh schedules it. jenkins-watch is
+infra/jenkins-watch/watch.py collect (Jenkins through its MCP server, read-only; same exit codes).
 
 The conditions mirror each agent's tick.md; keep them in sync when a tick changes.
 Boards: TRIAGE_PROJECTS (space-separated keys), else every key in projects.yaml.
@@ -17,6 +18,7 @@ PRECHECK_RULES_SINCE (optional ISO time): state changes before it never count fo
 from __future__ import annotations
 
 import os
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
@@ -219,7 +221,7 @@ def boards() -> List[str]:
 
 def main(argv: List[str]) -> int:
     if len(argv) < 2:
-        print("usage: precheck.py <triage|analyst|release|nightly> <since>", file=sys.stderr)
+        print("usage: precheck.py <triage|analyst|release|nightly|jenkins-watch> <since>", file=sys.stderr)
         return 3
     agent, since = argv[0], argv[1]
     env = A.env_values()
@@ -255,6 +257,12 @@ def main(argv: List[str]) -> int:
             raise Done(1, "idle")
         if agent == "nightly":
             work(None, "nightly pass (scheduled by nightly.sh; never skipped)")
+        if agent == "jenkins-watch":
+            # Reads every job and the watched topic's new alerts, keeps the incident state and writes
+            # facts.json for the agent; prints its own work/idle/failed line.
+            watch = Path(__file__).resolve().parents[1] / "jenkins-watch" / "watch.py"
+            rc = subprocess.run([sys.executable, "-I", str(watch), "collect"], timeout=600).returncode
+            return rc if rc in (0, 1) else 3
         fail(f"unknown agent {agent}")
     except Done as d:
         print(d.text, file=sys.stderr if d.code == 3 else sys.stdout)

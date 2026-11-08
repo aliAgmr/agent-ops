@@ -17,7 +17,7 @@ flowchart TB
 
   subgraph Host["Agent host · macOS launchd or Linux systemd"]
     RA["run-agent.sh<br/>lock · precheck · budget · breaker"]
-    SA["service agents<br/>triage · analyst · release · nightly"]
+    SA["service agents<br/>triage · analyst · release · nightly<br/>jenkins-watch (optional)"]
     AM["agent-mcp<br/>ask · messages · blame · suspects · lineage · revert_plan"]
     JR[("journal")]
     LN[("lineage")]
@@ -55,6 +55,7 @@ flowchart TB
   AM --> AD
   TB -->|"webhook"| WK --> RA
   AM --> TG
+  SA -->|"jenkins-watch report"| TG
 ```
 
 ## Layers of safety

@@ -67,6 +67,7 @@ Environment variables for either installer (all optional):
 | `NIGHTLY=true` | `NIGHTLY_AT=02:30` `NIGHTLY_DAYS=1,2,3,4,5` `NIGHTLY_SEND_AT=08:30` `NIGHTLY_SEND_DAYS=1,2,3,4,5` (0 = Sunday) | `NIGHTLY_ONCALENDAR="Mon..Fri 02:30"` `NIGHTLY_SEND_ONCALENDAR="Mon..Fri 08:30"` | the nightly pass and its morning messages, host's local time (`infra/nightly/README.md`) |
 | `WAKE=true` | ✓ | ✓ | instant triage: n8n calls the wake service on :8766 on every task-board change; triage starts within ~10 s (bursts collapse into one run). The interval timer stays as a safety net. |
 | `AGENT_MCP=true` | ✓ | ✓ (`AGENT_MCP_HOST`) | the project Q&A + action journal server on :8765 (`infra/agent-mcp/README.md`) |
+| `JENKINS_WATCH=true` | `io.agent-ops.agent-jenkins-watch`, `io.agent-ops.telegram-poll` | `agent-jenkins-watch.timer`, `telegram-poll.timer` | the optional Jenkins watcher (`JENKINS_WATCH_INTERVAL`, default 900 s; follows `ENABLE_TIMERS`) and its Telegram poller (every 60 s, started at once); `infra/jenkins-watch/README.md` |
 | `BACKUP=true` | `BACKUP_AT=03:15` | `BACKUP_ONCALENDAR="*-*-* 03:15"` | nightly backup, below; `OFFSITE_DIR` for an off-host copy |
 | `TUNNEL=true` | ✓ | ✓ | SSH local forwards to the read-only data sources, below |
 | `PUBLISH_TUNNEL=true`, `BI_TUNNEL=true` | ✓ | ✓ | SSH remote forwards that publish the task board (and its database for BI) on a gateway, below |
@@ -81,7 +82,7 @@ are git-ignored and re-rendered before every tick).
 
 - **Model:** triage and release run on Sonnet (turn caps 80 and 40), the analyst on Opus (150), the
   nightly agent on Sonnet (300). Override with `AGENT_MODEL_<AGENT>` / `AGENT_MAX_TURNS_<AGENT>`
-  (`TRIAGE`, `ANALYST`, `RELEASE`, `NIGHTLY`) in the env file.
+  (`TRIAGE`, `ANALYST`, `RELEASE`, `NIGHTLY`, `JENKINS_WATCH`: Sonnet, 40) in the env file.
 - **Budget:** a tick is skipped when all service agents together spent `AGENT_BUDGET_5H_USD`
   (default $60, API prices, from the `.jsonl` logs) in the last 5 hours. One alert per 5 hours.
 - **Usage limit:** when Claude reports the plan's usage limit, the agent pauses until the reset time
@@ -98,7 +99,7 @@ are git-ignored and re-rendered before every tick).
 (`git pull --ff-only`), so a merge reaches the agents within a tick. Long-running services (wake,
 agent-mcp) need a restart to pick up their own code.
 
-The triage, agent-mcp and nightly agents read code from `/srv/repos/<repo>`: one clone per repo in
+The triage, agent-mcp, nightly and jenkins-watch agents read code from `/srv/repos/<repo>`: one clone per repo in
 `routing.yaml`, made by the installer. `run-agent.sh` pulls them before each triage and nightly
 tick through `infra/bin/repo-sync.sh`, with the read-only token of the repo's code host
 (`CODEHOST_<KEY>_TOKEN`, GitLab or GitHub). The token reaches git only through `GIT_CONFIG_*`

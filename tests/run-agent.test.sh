@@ -57,6 +57,12 @@ check "triage runs on sonnet, 80 turns" 'grep -q -- "--model sonnet --strict-mcp
 check "service agents read artifacts read-only" 'grep -q "^artifacts_ro=1 cwd=triage$" "$T/claude-env"'
 check "journal: the run's writes are reported as this agent and run" 'grep -Eq "^journal name=triage run=triage-[0-9T]+-[0-9]+ url=http://127.0.0.1:8765/journal" "$T/claude-journal"'
 check "journal: the run id is in the run log" 'tail -1 "$T/logs/triage/$(date +%F).jsonl" | jq -e ".run_id | startswith(\"triage-\")" >/dev/null'
+reset; AGENT_OPS_ENV=/dev/null TRACKER_TRIAGE_TOKEN=tok-test-triage run ok jenkins-watch
+check "jenkins-watch runs on sonnet, 40 turns, in service/jenkins-watch" 'grep -q -- "--model sonnet --strict-mcp-config --mcp-config .mcp.json --max-turns 40" "$T/claude-calls" && grep -q "^artifacts_ro=1 cwd=jenkins-watch$" "$T/claude-env"'
+check "jenkins-watch: its writes are journaled with the triage bot's token" 'grep -Eq "^journal name=jenkins-watch run=jenkins-watch-[0-9T]+-[0-9]+ url=.* token=set$" "$T/claude-journal"'
+# its precheck (watch.py collect) writes the facts the agent reads: never skipped by the 6-hour safety net
+reset; AGENT_OPS_ENV=/dev/null AGENT_PRECHECK=on JENKINS_MCP_URL= run ok jenkins-watch
+check "jenkins-watch: the precheck runs even with no earlier successful run" 'grep -q "JENKINS_MCP_URL" "$T/logs/jenkins-watch/precheck.err"'
 reset; run ok analyst
 # quality: the analyst's run log carries the claim count of the item it analysed and the checker's verdict
 cat >"$T/bin/fake-claims" <<'EOS'

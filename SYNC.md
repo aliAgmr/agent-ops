@@ -20,10 +20,11 @@ If you run your own fork, you can keep a file like this to track what you change
 |---|---|
 | `plugins/core/**` | Guard, journal hook, session notes and core skills. Skill text is generic here. |
 | `plugins/role-*/skills/**` | Role skills. Here role plugins carry skills only (see below). |
-| `service/{triage,analyst,release,nightly,agent-mcp}/**` | Prompts, ticks, skills, settings. Here the MCP configs are rendered from `mcp.template.json`. |
+| `service/{triage,analyst,release,nightly,jenkins-watch,agent-mcp}/**` | Prompts, ticks, skills, settings. Here the MCP configs are rendered from `mcp.template.json`. |
 | `infra/bin/{run-agent.sh,alert.sh,repo-sync.sh,nightly.sh,nightly-send.sh,journal,lineage,traps,figma-shot.py}` | Host scripts. |
 | `infra/agent-mcp/**`, `infra/journal/**`, `infra/quality/**`, `infra/nightly/**` | Server, journal, quality and nightly. |
-| `infra/macos/**`, `infra/systemd/**`, `infra/bootstrap.sh` | Host install. Here the launchd prefix is `io.agent-ops` and Linux is at parity. |
+| `infra/jenkins-watch/**`, `infra/telegram/**` | The Jenkins watcher and its Telegram poller. Here they read the env file and people.yaml through `infra/adapters`. |
+| `infra/macos/**`, `infra/systemd/**`, `infra/bootstrap.sh` | Host install. Here the launchd prefix is `io.agent-ops` and Linux is at parity (e.g. `telegram-poll.plist.template` ↔ `telegram-poll.service` + `.timer`). |
 | `infra/plane/**`, `infra/n8n/**` | Task-board install/configure, and notifications. |
 | `clients/**` | Cursor/Codex installer. Here it also has the Kimi client and `--tools`. |
 | `desks/{CLAUDE.md,SETUP.md,setup.sh,templates,claude-memory,.githooks}` | The desk framework. |
@@ -39,6 +40,7 @@ If you run your own fork, you can keep a file like this to track what you change
 | `infra/bin/post-commit-status.py` | `infra/bin/post-commit-status.sh` | Through the code-host adapter |
 | `infra/bin/render-mcp.py`, `service/*/mcp.template.json` | Committed `service/*/.mcp.json` | Edit the template, not a rendered file |
 | `plugins/{gitlab,github,postgres,clickhouse,jenkins,figma,metabase}-tools` | MCP servers inside the role plugins | Server changes go to the tool plugin |
+| `knowledge/jenkins-owners.yaml` (example rules for the example team) | The team's job-name → project/owner rules | Port the format, never the rules |
 | `plugins/core/skills/data-traps/` (example checks) | A warehouse-traps skill with real checks | Port the format and runner changes, never the checks |
 | `infra/lineage/scanners` + `knowledge/lineage-sources.yaml` | Scanners wired to one stack | Port scanner fixes into the matching built-in scanner |
 | `desks/{bi-manager,ci-manager,debugging}` (examples) | The team's own desks | Port only framework changes |
@@ -55,6 +57,7 @@ If you run your own fork, you can keep a file like this to track what you change
 | `CODEHOST_<KEY>_TOKEN`, `CODEHOST_<KEY>_RELEASE_TOKEN` | `GITLAB_AGENT_TOKEN`, `GITLAB_RELEASE_TOKEN` (one host per variable) |
 | `revert.env`: `TRACKER_REVERT_TOKEN`, `CODEHOST_<KEY>_REVERT_TOKEN` | `revert.env`: `PLANE_REVERT_TOKEN`, `GITLAB_REVERT_TOKEN` |
 | `JENKINS_MCP_URL`, `AGENT_ALERTS` | `JENKINS_URL`-style, `ALERTS` |
+| `TELEGRAM_WATCH_CHAT_ID`, `TELEGRAM_WATCH_TOPIC_ID`, `TELEGRAM_BOT_USERNAME`, `JENKINS_WATCH_*`, `JENKINS_WATCH=true` | the same names |
 | Core plugin options `tracker_api_key`, `tracker_base_url`, `tracker_workspace_slug`, `agent_mcp_url`, `role` | `plane_api_key`, `plane_base_url`, `plane_workspace_slug`, `role` (agent-mcp URL fixed) |
 | `routing.yaml` repos `host: <code_hosts key>` | `gitlab: main|data` |
 | `projects.yaml` `tracker_project_id` | `plane_project_id` |

@@ -66,6 +66,9 @@ four, on the default schedules (triage every 5 min, analyst every 10 min, releas
 nightly at 02:30 local time, weekdays). Also:
 - **Model per agent.** Defaults: Sonnet for triage, release and nightly; Opus for analyst.
 - **Budget.** The spend cap per 5 hours at API prices (default $60).
+- **Jenkins watcher?** Optional, default no (needs a Jenkins MCP server and a Telegram group). It
+  posts an assessed summary of failed and stuck jobs to a topic of the team's group, mentioning
+  owners. If yes: the group and topic, and which team owns which jobs (job-name patterns).
 - **Claude auth.** A Console API key, or a subscription token from `claude setup-token`.
 
 **G. Optional data sources** the agents may read (read-only accounts only):
@@ -98,6 +101,8 @@ From the answers, write:
 - `projects.yaml`: every project with its `tracker_project_id`, filled in step 5.
 - `people.yaml`, from `people.template.yaml`. It is git-ignored: it holds emails.
 - `knowledge/lineage.yaml` (optional): metrics, page names and owners. See the example in the file.
+- `knowledge/jenkins-owners.yaml` (only with the Jenkins watcher): job-name patterns → project and
+  owner. Replace the example rules.
 
 Check: `python3 -I infra/bin/adapter repos` lists every repo you expect; `bash tools/lint.sh` is
 clean.
@@ -120,7 +125,7 @@ line for each:
 | `CODEHOST_<KEY>_TOKEN` | Read-only token per code host |
 | `CODEHOST_<KEY>_RELEASE_TOKEN` | Only for the release agent. GitLab: `api` scope, Developer. GitHub: fine-grained, Commit statuses write + Pull requests read |
 | `PG_RO_URL`, `CH_RO_PASSWORD`, `METABASE_AGENT_API_KEY`, `JENKINS_RO_AUTH`, `FIGMA_RO_TOKEN` | Read-only accounts for the data sources you chose |
-| `TELEGRAM_BOT_TOKEN` | Only if you use Telegram |
+| `TELEGRAM_BOT_TOKEN` | Only if you use Telegram (also the Jenkins watcher's bot) |
 
 **Revert tokens.** These belong to a person (usually the tech lead) and go in
 `~/.config/agent-ops/revert.env`, mode 600, which no agent ever loads:
@@ -152,7 +157,7 @@ for the triage bot.
 
 Set the answers from section 1F as environment variables on the install command:
 - `AGENTS="triage:300 analyst:600 release:900"`, plus `NIGHTLY=true` with its times;
-- `WAKE`, `AGENT_MCP` and `BACKUP` set to `true` or `false`;
+- `WAKE`, `AGENT_MCP`, `BACKUP` and `JENKINS_WATCH` set to `true` or `false`;
 - `TRACKER_BASE_URL` and `TRACKER_WORKSPACE`.
 
 Each installer's header lists every setting. The first run installs everything with the schedules
@@ -171,6 +176,14 @@ off; check it, then run it again with `ENABLE_TIMERS=true`.
 
 **Linux** (systemd units for a dedicated `agents` user): run `sudo bash infra/bootstrap.sh`, with
 the same settings and parts. The nightly and backup times use systemd `OnCalendar` syntax.
+
+**Jenkins watcher (only if chosen).** Follow `infra/jenkins-watch/README.md` "Setup":
+1. The person turns on Bot-to-Bot Communication Mode for the bot in @BotFather and adds it to the
+   group as an admin.
+2. They send a message in the topic; `python3 infra/telegram/poll.py chats` then shows the ids. Write
+   `TELEGRAM_WATCH_CHAT_ID`, `TELEGRAM_WATCH_TOPIC_ID` and `TELEGRAM_BOT_USERNAME` into the env file
+   (not secrets).
+3. Check: `python3 infra/jenkins-watch/watch.py collect` exits 0 or 1 (3 = Jenkins unreadable).
 
 **Both:**
 - The person exposes agent-mcp (`127.0.0.1:8765`) at `AGENT_MCP_PUBLIC_URL` through their
