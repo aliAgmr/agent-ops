@@ -209,6 +209,12 @@ def collect(jm: JenkinsMCP, state: Dict[str, Any], rules: List[Dict[str, str]], 
             old.update({k: v for k, v in cur.items()})
             if changed:
                 events.append({"event": "again", "job": name, **old})
+    # An incident no run has assessed yet (the agent failed, or its post never ran) is offered again,
+    # so a failed run never loses a report; `post` marks every job it was shown as assessed.
+    evented = {e["job"] for e in events}
+    for name, inc in incidents.items():
+        if name in current and name not in evented and not inc.get("verdict"):
+            events.append({"event": "new", "job": name, "retry": True, **inc})
     for name in [n for n in incidents if n not in current]:
         inc = incidents.pop(name)
         if inc.get("messages") or inc.get("alerts"):     # tell the group only about what it heard of
@@ -332,6 +338,14 @@ def post(state: Dict[str, Any], decisions: Dict[str, Any], env: Dict[str, str]) 
                 text += f" · {mention(d['owner'], team)}"
             sent["replies"].append({"to": m, "id": send(token, chat, text, topic, reply_to=m)})
             time.sleep(1)                           # Telegram's bot-to-bot guidance: no reply bursts
+    # Every job the agent was shown counts as assessed, posted or not, so it isn't offered again.
+    shown = {e["job"] for e in load_json(DIR / "facts.json", {}).get("events", [])}
+    for d in decisions.get("items", []):
+        if d.get("job") in incidents and not incidents[d["job"]].get("verdict"):
+            incidents[d["job"]]["verdict"] = d.get("verdict") or "seen"
+    for job in shown:
+        if job in incidents and not incidents[job].get("verdict"):
+            incidents[job]["verdict"] = "seen"
     record(sent, decisions)
     return sent
 
