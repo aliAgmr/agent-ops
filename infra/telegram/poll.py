@@ -11,10 +11,12 @@ Telegram delivers another bot's group messages to ours only with Bot-to-Bot Comm
   poll.py chats      the chats and topics seen so far (ids and titles, never message text): use it to
                      find TELEGRAM_WATCH_CHAT_ID / TELEGRAM_WATCH_TOPIC_ID after adding the bot
   poll.py recent [N] the last N stored messages of the watched topic (for checks)
+  poll.py private    people who opened a private chat with the bot (id, username, name; no text)
 
 Only the watched chat's messages are stored (text included); every other update is acknowledged
-and dropped. Kept 30 days. The poller consumes the bot's updates, which infra/n8n/telegram-chat-ids.sh
-reads too: stop the poller while people press Start on the bot and you run that script.
+and dropped. Kept 30 days. The poller consumes the bot's updates, so it also records who opens a
+private chat with the bot (id, username, name; never the text): `poll.py private`, which
+infra/n8n/telegram-chat-ids.sh reads too.
 Settings: TELEGRAM_BOT_TOKEN, TELEGRAM_WATCH_CHAT_ID (env file). Standard library only.
 """
 from __future__ import annotations
@@ -48,6 +50,9 @@ create table if not exists chats (
   chat_id integer not null, thread_id integer not null default 0, type text, title text,
   last_seen integer not null, bot_senders text,
   primary key (chat_id, thread_id)
+);
+create table if not exists private_chats (
+  chat_id integer primary key, username text, first_name text, last_name text, last_seen integer not null
 );
 create table if not exists state (key text primary key, value text);
 """
@@ -95,6 +100,10 @@ def store(c: sqlite3.Connection, updates: List[Dict[str, Any]], watch_chat: Opti
                 bots.add(frm["username"])
             c.execute("insert or replace into chats (chat_id, thread_id, type, title, last_seen, bot_senders) values (?,?,?,?,?,?)",
                       (cid, thread, chat.get("type"), chat.get("title"), now, json.dumps(sorted(bots))))
+        if chat.get("type") == "private":   # someone pressed Start: keep who (for DMs), never the text
+            c.execute("insert or replace into private_chats (chat_id, username, first_name, last_name, last_seen) values (?,?,?,?,?)",
+                      (cid, chat.get("username") or frm.get("username") or "", chat.get("first_name") or frm.get("first_name") or "",
+                       chat.get("last_name") or frm.get("last_name") or "", m.get("date") or now))
         if watch_chat is None or cid != watch_chat:
             continue
         reply = (m.get("reply_to_message") or {}).get("message_id")
@@ -141,6 +150,9 @@ def main(argv: List[str]) -> int:
     elif cmd == "chats":
         rows = db().execute("select chat_id, thread_id, type, title, last_seen, bot_senders from chats order by last_seen desc").fetchall()
         print(json.dumps([dict(r) for r in rows], indent=2, ensure_ascii=False))
+    elif cmd == "private":
+        rows = db().execute("select chat_id, username, first_name, last_name, last_seen as last from private_chats").fetchall()
+        print(json.dumps([dict(r) for r in rows], ensure_ascii=False))
     elif cmd == "recent":
         n = int(argv[2]) if len(argv) > 2 else 10
         rows = db().execute("select message_id, thread_id, date, from_username, from_is_bot, substr(text,1,200) text "
