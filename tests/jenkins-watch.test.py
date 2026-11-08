@@ -193,6 +193,10 @@ check(any(c["chat_id"] == CHAT and c["thread_id"] == TOPIC and "jenkins_notify_b
       and not any(c["chat_id"] == 555 for c in chats), "poller: `chats` lists group topics and their bots (not private chats)", chats)
 rc, out = run(str(ROOT / "infra/telegram/poll.py"))
 check(json.loads(out.strip().splitlines()[-1])["updates"] == 0, "poller: an update is read once (offset kept)", out)
+rc, out = run(str(ROOT / "infra/telegram/poll.py"), "private")
+priv = json.loads(out)
+check(priv and all("text" not in p for p in priv) and any(p.get("username") for p in priv),
+      "poller: who opened a private chat is kept for DMs (id, username), never the text", priv)
 rc, out = collect()
 f = facts()
 check(rc == 0 and f["alerts"] and f["alerts"][0]["message_id"] == 501

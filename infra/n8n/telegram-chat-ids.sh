@@ -48,6 +48,11 @@ const clean = (s) => String(s).split(token).join('<token>');
 })().catch((e) => { console.error('error: ' + clean(e.message)); process.exit(4); });
 JS
 )"
+# The Telegram poller (infra/telegram/poll.py) reads the bot's updates every minute, so a Start
+# pressed earlier may be gone from getUpdates: add the private chats it recorded.
+polled="$(python3 -I "$ROOT/infra/telegram/poll.py" private 2>/dev/null || echo '[]')"
+chats="$(jq -cn --argjson a "${chats:-[]}" --argjson b "${polled:-[]}" \
+  '$a + $b | group_by(.chat_id) | map(max_by(.last)) | map(.username //= "" | .first_name //= "" | .last_name //= "")')"
 
 ruby -E UTF-8 -rjson -ryaml -e '
   chats = JSON.parse(ARGV[0]); file = ARGV[1]; write = ARGV[2] == "1"
