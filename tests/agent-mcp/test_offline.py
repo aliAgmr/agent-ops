@@ -10,6 +10,7 @@ import asyncio
 import json
 import os
 import socket
+import socketserver
 import sys
 import tempfile
 import threading
@@ -395,8 +396,16 @@ def unit() -> None:
     check(body == "Answer." and src == ["a.ts:1", "b.ts:2"], "split_sources")
 
 
+class FakeServer(ThreadingHTTPServer):
+    """ThreadingHTTPServer without HTTPServer's reverse-DNS lookup of the bind address
+    (socket.getfqdn), which can take ~35 s, e.g. on GitHub's macOS runners."""
+    def server_bind(self):
+        socketserver.TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
+
+
 def main() -> int:
-    tg = ThreadingHTTPServer(("127.0.0.1", tg_port), FakeTelegram)
+    tg = FakeServer(("127.0.0.1", tg_port), FakeTelegram)
     threading.Thread(target=tg.serve_forever, daemon=True).start()
     connector = server.J.Connector({}, tracker_factory=FakeTracker, codehost_factory=lambda k, t: None, hosts={})
     app = server.build_app(server.Config.from_env(), connector=connector)
