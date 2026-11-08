@@ -119,7 +119,9 @@ fi
 # on this same host, so trust the host itself: an IP must be in WEBHOOK_ALLOWED_IPS for the private
 # address check, and any host in WEBHOOK_ALLOWED_HOSTS skips both checks.
 # Override with PLANE_WEBHOOK_ALLOWED_IPS / PLANE_WEBHOOK_ALLOWED_HOSTS.
-def_hosts=""; def_ips=""
+# n8n on this host is reached through Docker's own name for the host, so webhooks keep working
+# when the host's network address changes (a host in WEBHOOK_ALLOWED_HOSTS skips both checks).
+def_hosts="host.docker.internal"; def_ips=""
 for h in "$HOST" $LOCAL_HOST; do
   def_hosts="${def_hosts:+$def_hosts,}$h"
   [[ "$h" =~ ^[0-9.]+$ ]] && def_ips="${def_ips:+$def_ips,}$h"

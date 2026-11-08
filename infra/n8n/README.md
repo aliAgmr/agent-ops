@@ -18,6 +18,8 @@ First visit to `http://<host>:5678` creates the owner account. Then:
    and `WAKE_TOKEN` (same value as in the agents' env file), then re-run `install.sh`.
 3. Build and import the flow (below).
 4. Point the Plane webhook (workspace settings → Webhooks) at `http://<host>:5678/webhook/plane`
+   (Plane on the same host: `http://host.docker.internal:5678/webhook/plane`, and set
+   `TRACKER_FLOW_URL=http://host.docker.internal`, so nothing depends on the host's network address)
    (work items + comments). Plane allows that private address because `infra/plane/install.sh` puts
    its own host into `WEBHOOK_ALLOWED_HOSTS` / `WEBHOOK_ALLOWED_IPS`.
 

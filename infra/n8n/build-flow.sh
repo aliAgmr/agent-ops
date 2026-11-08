@@ -24,6 +24,9 @@ envval() { [ -r "$ENV_FILE" ] && grep -E "^$1=" "$ENV_FILE" | tail -1 | cut -d= 
 PLANE_URL="${TRACKER_BASE_URL:-$(envval TRACKER_BASE_URL)}"
 WORKSPACE="${TRACKER_WORKSPACE:-$(envval TRACKER_WORKSPACE)}"
 WEB_URL="${PLANE_WEB_URL:-$PLANE_URL}"
+# What the flow itself calls from inside the n8n container. When Plane runs on the same host, set
+# TRACKER_FLOW_URL=http://host.docker.internal so the flow never depends on the host's network address.
+FLOW_URL="${TRACKER_FLOW_URL:-$(envval TRACKER_FLOW_URL)}"; FLOW_URL="${FLOW_URL:-$PLANE_URL}"
 [ -n "$PLANE_URL" ] && [ -n "$WORKSPACE" ] || { echo "set TRACKER_BASE_URL and TRACKER_WORKSPACE" >&2; exit 1; }
 CONTAINER="${N8N_CONTAINER:-n8n-n8n-1}"
 TG_TOPICS="${TG_TOPICS:-}"; [ -n "$TG_TOPICS" ] || TG_TOPICS='{}'
@@ -75,7 +78,7 @@ fi
 code="$(jq -Rrs --arg pr "$PROJECTS" --arg t "$TG_TOPICS" --arg s "$states" --arg p "$people" --arg c "$CONFIG" \
   'sub("__PROJECTS__"; $pr) | sub("__TOPICS__"; $t) | sub("__STATES__"; $s) | sub("__PEOPLE__"; $p) | sub("__CONFIG__"; $c)' "$HERE/flows/plane-notify.js")"
 embed() {  # embed <file>: fill the placeholders of a Code node source
-  jq -Rrs --arg pr "$PROJECTS" --arg p "$people" --arg c "$CONFIG" --arg api "$(jq -n --arg u "${PLANE_URL%/}" '$u')" \
+  jq -Rrs --arg pr "$PROJECTS" --arg p "$people" --arg c "$CONFIG" --arg api "$(jq -n --arg u "${FLOW_URL%/}" '$u')" \
     'sub("__PROJECTS__"; $pr) | sub("__PEOPLE__"; $p) | sub("__CONFIG__"; $c) | sub("__PLANE_API__"; $api)' "$1"
 }
 collect="$(embed "$HERE/flows/dm-collect.js")"
