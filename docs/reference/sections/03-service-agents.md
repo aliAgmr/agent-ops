@@ -246,7 +246,8 @@ Full description: `infra/jenkins-watch/README.md`.
 - **Permissions** (`service/jenkins-watch/.claude/settings.json`): `dontAsk`; extra directories
   `/srv/repos` and `~/.local/share/agent-ops/jenkins-watch`. Allowed: Read, Grep, Glob;
   `git -C /srv/repos/* grep|log|show|ls-files`; `lineage upstream|impact`; `watch.py post`; Write of
-  `decisions.json` only; the Jenkins read tools. Denied: the Jenkins write tools, Edit, Web. MCP:
+  `decisions.json` only (Write and Edit); the Jenkins read tools. Denied: the Jenkins write tools, Web, and any other file write (don't-ask mode; an `Edit` deny would block
+  `Write` too, since Edit rules cover every file-writing tool). MCP:
   Jenkins only (`mcp.template.json`). Journal identity: the triage bot's token.
 - **Tests.** `tests/jenkins-watch.test.py` (a fake Jenkins MCP and a fake Telegram): idle when quiet;
   a new failure and a stuck build with project and owner; no write tool called; the poller (watched

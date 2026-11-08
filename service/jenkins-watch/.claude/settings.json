@@ -17,6 +17,7 @@
       "Bash(/srv/agent-ops/infra/bin/lineage impact *)",
       "Bash(python3 /srv/agent-ops/infra/jenkins-watch/watch.py post)",
       "Write(~/.local/share/agent-ops/jenkins-watch/decisions.json)",
+      "Edit(~/.local/share/agent-ops/jenkins-watch/decisions.json)",
       "mcp__jenkins__getJob",
       "mcp__jenkins__getJobs",
       "mcp__jenkins__getBuild",
@@ -27,7 +28,6 @@
       "mcp__jenkins__getFlakyFailures"
     ],
     "deny": [
-      "Edit",
       "NotebookEdit",
       "WebFetch",
       "WebSearch",
