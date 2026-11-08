@@ -18,3 +18,18 @@ infra/bin/traps run
 ```
 
 On Linux the logs are under `/var/log/agents/`.
+
+## When the host's network address changes
+
+If the machine that runs Plane, n8n and the service agents gets a new address (a new DHCP lease,
+Wi-Fi instead of a cable), everything that names that address breaks at once: the agents' tracker
+URL, Plane → n8n webhooks and n8n's calls back to Plane. Avoid it from the start:
+
+- `TRACKER_BASE_URL=http://127.0.0.1` in the host's env file when Plane runs on the same host;
+- the Plane webhook at `http://host.docker.internal:5678/webhook/plane` and
+  `TRACKER_FLOW_URL=http://host.docker.internal` for n8n (`infra/plane/install.sh` already allows
+  that host for webhooks);
+- people's clients use the public/reverse-proxy address, never the host's LAN address.
+
+Related: an outage can leave `uvx` re-downloading the tracker MCP server's dependencies on a slow
+link, so its first start times out. Warm it once by hand (`uvx --from <package>==<version> python -c 1`).
