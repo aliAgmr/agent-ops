@@ -8,7 +8,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 T="$(mktemp -d)"; mkdir -p "$T/cfg"
 export AGENT_JOURNAL_DB="$T/journal.sqlite3"   # never the real action journal
 cat >"$T/server.py" <<'PY'
-import http.server, json, os
+import http.server, socketserver, json, os
 T = os.environ["T"]
 class H(http.server.BaseHTTPRequestHandler):
     def log_message(self, *a): pass
@@ -24,13 +24,20 @@ class H(http.server.BaseHTTPRequestHandler):
         auth = self.headers.get("PRIVATE-TOKEN") or self.headers.get("Authorization") or ""
         open(os.path.join(T, "posts"), "a").write(f"{self.path} {auth} {body}\n")
         self.send_response(201); self.end_headers(); self.wfile.write(b"{}")
-s = http.server.ThreadingHTTPServer(("127.0.0.1", 0), H)
+class Server(http.server.ThreadingHTTPServer):
+    # Skip HTTPServer's reverse-DNS lookup of 127.0.0.1 (socket.getfqdn): it takes ~35 s on
+    # GitHub's macOS runners, longer than the wait for the port file below.
+    def server_bind(self):
+        socketserver.TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
+s = Server(("127.0.0.1", 0), H)
 open(os.path.join(T, "port"), "w").write(str(s.server_address[1]))
 s.serve_forever()
 PY
 T="$T" python3 "$T/server.py" & SERVER=$!; disown "$SERVER"
 trap 'kill $SERVER 2>/dev/null; rm -rf "$T"' EXIT
 for _ in $(seq 1 50); do [ -s "$T/port" ] && break; sleep 0.1; done
+[ -s "$T/port" ] || { echo "FAIL the fake HTTP server did not start"; exit 1; }
 URL="http://127.0.0.1:$(cat "$T/port")"
 sed -e "s#https://gitlab.example.com#$URL#" -e "s#https://github.com#$URL#" "$ROOT/routing.yaml" >"$T/cfg/routing.yaml"
 export AGENT_OPS_CONFIG_ROOT="$T/cfg" AGENT_OPS_ENV=/dev/null CODEHOST_MAIN_RELEASE_TOKEN="gl-rel" CODEHOST_OSS_RELEASE_TOKEN="gh-rel"
