@@ -9,7 +9,7 @@ PRECHECK="$ROOT/infra/bin/precheck.sh"
 T="$(mktemp -d)"; mkdir -p "$T/fx" "$T/cfg"
 export FX="$T/fx"
 cat >"$T/server.py" <<'PY'
-import http.server, os, re, sys, urllib.parse
+import http.server, socketserver, os, re, sys, urllib.parse
 FX = os.environ["FX"]
 class H(http.server.BaseHTTPRequestHandler):
     def log_message(self, *a): pass
@@ -22,13 +22,20 @@ class H(http.server.BaseHTTPRequestHandler):
             self.send_response(200); self.send_header("Content-Type", "application/json"); self.end_headers(); self.wfile.write(body)
         else:
             self.send_response(404); self.end_headers(); self.wfile.write(b'{"message":"404 Not found"}')
-s = http.server.ThreadingHTTPServer(("127.0.0.1", 0), H)
+class Server(http.server.ThreadingHTTPServer):
+    # Skip HTTPServer's reverse-DNS lookup of 127.0.0.1 (socket.getfqdn): it takes ~35 s on
+    # GitHub's macOS runners, longer than the wait for the port file below.
+    def server_bind(self):
+        socketserver.TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
+s = Server(("127.0.0.1", 0), H)
 open(os.path.join(os.environ["T"], "port"), "w").write(str(s.server_address[1]))
 s.serve_forever()
 PY
 T="$T" python3 "$T/server.py" & SERVER=$!; disown "$SERVER"
 trap 'kill $SERVER 2>/dev/null; rm -rf "$T"' EXIT
 for _ in $(seq 1 50); do [ -s "$T/port" ] && break; sleep 0.1; done
+[ -s "$T/port" ] || { echo "FAIL the fake HTTP server did not start"; exit 1; }
 URL="http://127.0.0.1:$(cat "$T/port")"
 # config: the example team, its code hosts on the fake server, bot users filled in
 sed -e "s#https://gitlab.example.com#$URL#" -e "s#https://github.com#$URL#" "$ROOT/routing.yaml" >"$T/cfg/routing.yaml"
