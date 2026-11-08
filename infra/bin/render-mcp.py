@@ -3,7 +3,7 @@
 (service/<agent>/mcp.template.json) and routing.yaml. run-agent.sh calls it before every tick;
 SETUP.md and install scripts call it for every agent once (`render-mcp.py all`).
 
-  render-mcp.py <triage|analyst|release|nightly|agent-mcp|all> [--check]
+  render-mcp.py <triage|analyst|release|nightly|jenkins-watch|agent-mcp|all> [--check]
 
 The template lists the servers every team has (the task board) and optional ones, each with
 `"requires": [ENV, …]`: a server whose required variables are empty in the env file is left out, so a
@@ -29,7 +29,7 @@ sys.path.insert(0, str(HERE.parent))
 import adapters as A  # noqa: E402
 
 ROOT = HERE.parents[1]
-AGENTS = ["triage", "analyst", "release", "nightly", "agent-mcp"]
+AGENTS = ["triage", "analyst", "release", "nightly", "jenkins-watch", "agent-mcp"]
 
 
 def code_host_servers(routing: dict, access: str) -> dict:

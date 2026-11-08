@@ -85,6 +85,23 @@ infra/bin/traps for-files <changed paths>            # the checks a change reach
 A new check's `expect` is today's healthy value; use a baseline only when the current value isn't
 zero yet, and say so in the check.
 
+## Jenkins watcher
+
+```bash
+python3 infra/telegram/poll.py chats                 # group/topic ids and the bots seen there (setup)
+python3 infra/telegram/poll.py recent 5              # the last messages kept from the watched topic
+python3 infra/jenkins-watch/watch.py status          # open incidents (failed / stuck / queue)
+bash infra/bin/run-agent.sh jenkins-watch            # one tick now (collect runs first)
+```
+
+- Pause it like any agent (`<log root>/jenkins-watch/paused`), or turn its schedule off
+  (`launchctl bootout gui/$(id -u)/io.agent-ops.agent-jenkins-watch`;
+  `systemctl disable --now agent-jenkins-watch.timer`). The poller is independent.
+- A job is mapped to the wrong project or owner: edit `knowledge/jenkins-owners.yaml` (first match
+  wins).
+- It never replies to the CI bot's alerts: check that Bot-to-Bot Communication Mode is on and that
+  the bot is still an admin (`poll.py chats` lists the notifier under `bot_senders`).
+
 ## Tests
 
 Every test is offline: each fakes the external tool it needs (curl, claude, launchctl, git, the
@@ -119,5 +136,6 @@ Each prints `ok` or `FAIL` per check and exits non-zero on any failure.
 1. `service/<name>/` with `CLAUDE.md`, `tick.md`, `.claude/settings.json` (copy the guard and
    journal hooks), `.mcp.json`, skills.
 2. Its case in `run-agent.sh` (model, turns) and `precheck.sh`.
-3. A launchd template entry and a systemd timer.
+3. A launchd template entry and a systemd timer (jenkins-watch: a flag that adds it to the
+   installers' `AGENTS` list).
 4. Tests in `tests/run-agent.test.sh` and `tests/precheck.test.sh`; a section here.

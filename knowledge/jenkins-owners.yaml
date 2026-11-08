@@ -1,0 +1,24 @@
+# Which project each Jenkins job belongs to and whom the Jenkins watcher (infra/jenkins-watch)
+# mentions when it needs attention. Rules are tried in order; the first `match` (a regular expression
+# over the job's full name, case-insensitive) wins. `project` is a projects.yaml key, `infra` or
+# `other`; `owner` is a people.yaml key, usually the person of the team that owns the job in
+# routing.yaml. Quote each pattern; keep one value per line.
+#
+# This is an EXAMPLE for the "Acme" team; SETUP.md writes yours.
+
+rules:
+  - match: '^billing-'
+    project: BIL
+    owner: alex
+  - match: '^pricing-'
+    project: PRC
+    owner: omar
+  - match: '^(etl|nightly)-'
+    project: ANL
+    owner: kenji
+  - match: '^deploy-|monitoring|backup'
+    project: infra
+    owner: lena
+  - match: '.'
+    project: other
+    owner: lena

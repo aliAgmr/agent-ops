@@ -36,3 +36,5 @@ digikala_
 70b16236
 f903c772
 437c3de5
+wcp_
+wce_agents

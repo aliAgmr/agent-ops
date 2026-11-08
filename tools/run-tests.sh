@@ -17,6 +17,7 @@ suites=(
   "figma-shot|python3 tests/figma-shot.test.py"
   "journal|python3 tests/journal.test.py"
   "quality|python3 tests/quality.test.py"
+  "jenkins-watch|python3 tests/jenkins-watch.test.py"
   "lineage|uv run -q --no-project --with pyyaml python tests/lineage.test.py"
   "nightly|uv run -q --no-project --with pyyaml --with requests --with markdown python tests/nightly.test.py"
   "n8n|bash tests/n8n-dm.test.sh"

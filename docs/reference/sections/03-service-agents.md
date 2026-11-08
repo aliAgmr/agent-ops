@@ -16,10 +16,12 @@ Service agents are Claude Code runs with no person at the keyboard. Each has its
 | analyst | one deep analysis of one bug or feature per run | every 10 min | `opus` | 150 |
 | release | gate on `dev` → `main` merge requests | every 15 min | `sonnet` | 40 |
 | nightly | boards in line with the day's work, findings, standup report | once a night | `sonnet` | 300 |
+| jenkins-watch (optional) | failed and stuck Jenkins jobs, assessed, to a Telegram topic | every 15 min, when something changed | `sonnet` | 40 |
 | agent-mcp | answers teammates' agents, read-only | on demand (HTTP server) | configurable | 20 / 50 / 120 by depth |
 
 Every model and turn cap can be overridden in the env file (`AGENT_MODEL_<AGENT>`,
-`AGENT_MAX_TURNS_<AGENT>`). The first four share one runner; agent-mcp has its own server.
+`AGENT_MAX_TURNS_<AGENT>`, e.g. `AGENT_MODEL_JENKINS_WATCH`). All but agent-mcp share one runner;
+agent-mcp has its own server.
 
 Each service agent acts on the task board with **its own bot user and token**, so its changes are
 attributable, the prechecks can ignore its own edits, and the journal can undo its changes with the
@@ -27,7 +29,7 @@ same rights it made them with.
 
 ## How a run works (`infra/bin/run-agent.sh`)
 
-`run-agent.sh <triage|analyst|release|nightly>` runs one tick:
+`run-agent.sh <triage|analyst|release|nightly|jenkins-watch>` runs one tick:
 
 1. **Env file.** With `AGENT_OPS_ENV` set (launchd), the file is sourced; systemd loads it itself.
 2. **Auth.** `ANTHROPIC_API_KEY` wins over `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`);
@@ -42,13 +44,14 @@ same rights it made them with.
 7. **Budget gate.** The API-price cost of all service-agent runs in the last 5 hours, summed from
    the run logs (a login token can't read the plan's usage). Over `AGENT_BUDGET_5H_USD` → skip and
    alert once per 5 hours. `off` disables it.
-8. **Pulls.** `git pull --ff-only` on agent-ops itself; for triage, analyst and nightly also
+8. **Pulls.** `git pull --ff-only` on agent-ops itself; for triage, analyst, nightly and jenkins-watch also
    `infra/bin/repo-sync.sh pull /srv/repos/*/`, which fetches each read-only clone from its code host
    with the agents' read-only token passed as an HTTP header through `GIT_CONFIG_*` variables, never
    on a command line or in a config file. A failed pull keeps the last copy.
 9. **Precheck.** `infra/bin/precheck.sh <agent> <since>` (no model, through the adapters): exit 1 =
    idle, no Claude; exit 0 = work; anything else = the check broke, run anyway (fail open). A full
-   run is forced at least every `AGENT_MAX_IDLE_HOURS` (6).
+   run is forced at least every `AGENT_MAX_IDLE_HOURS` (6), except for jenkins-watch, whose precheck
+   also writes the facts the agent reads and so runs on every tick.
 10. **Run Claude** from `service/<agent>/`:
     `claude -p "<tick.md + context>" --model … --strict-mcp-config --mcp-config .mcp.json --max-turns … --output-format json`.
     Exported for the run: `MCP_TIMEOUT=120000`, `AGENT_ARTIFACTS_READ_ONLY=1`, and the journal
@@ -78,6 +81,8 @@ passed to curl on stdin, never in argv). `AGENT_ALERTS=off` = log only.
 | analyst | every 600 s | `agent-analyst.timer`, 10 min |
 | release | every 900 s | `agent-release.timer`, 15 min |
 | nightly | `infra/bin/nightly.sh` once a night, `nightly-send.sh` in the morning | a nightly timer (see `infra/systemd/`) |
+| jenkins-watch | every 900 s (`JENKINS_WATCH=true`) | `agent-jenkins-watch.timer`, 15 min |
+| Telegram poller (jenkins-watch) | every 60 s, at load | `telegram-poll.timer`, every minute |
 | agent-mcp | always on (`KeepAlive`) | a long-running service (see `infra/systemd/`) |
 | wake listener | always on | a long-running service (see `infra/systemd/`) |
 
@@ -207,6 +212,50 @@ write the morning report.
 `--dry-run` makes the board read-only (the guard enforces it) and writes what it would do to
 `actions.json`.
 
+## jenkins-watch
+
+**Job.** Optional. Watches every Jenkins job and tells the team's Telegram topic, in English, what
+needs a person. Read-only on Jenkins: the read-only Jenkins user through the Jenkins MCP server, the
+write tools denied, and the guard. It needs `JENKINS_MCP_URL`, `JENKINS_RO_AUTH`,
+`TELEGRAM_BOT_TOKEN`, `TELEGRAM_WATCH_CHAT_ID` (and `TELEGRAM_WATCH_TOPIC_ID` for a forum topic).
+Full description: `infra/jenkins-watch/README.md`.
+
+- **Precheck = collect.** `infra/jenkins-watch/watch.py collect` pages `getJobs` (10 per call),
+  finds failed jobs (red, yellow, aborted) and stuck builds (`getBuild` of running jobs: more than
+  `JENKINS_WATCH_STUCK_FACTOR` (2) × the median duration of recent builds and at least
+  `JENKINS_WATCH_STUCK_MIN` (30) minutes), and a queue waiting two checks in a row. It diffs them
+  against `~/.local/share/agent-ops/jenkins-watch/state.json` into events (`new`, `again`,
+  `recovered` for an incident the group heard of) and adds the topic's new alerts from other bots,
+  linked to the jobs they name. It writes `facts.json`; exit 1 = nothing new (no Claude run), 3 =
+  Jenkins unreadable.
+- **Poller.** `infra/telegram/poll.py` (every 60 s) reads the team bot's updates with getUpdates
+  (outbound only) and stores the watched chat's messages for 30 days. The bot only receives another
+  bot's messages with Bot-to-Bot Communication Mode on (@BotFather) and as an admin of the group.
+- **The agent** (`tick.md`): reads the log tail (`getBuildLog`, `searchBuildLog`) and the job's
+  current state. Verdict `attention` (a real error, or one repeating), `transient` (a dropped
+  connection, a timeout, already passing), `stuck` (stuck builds and the queue) or `recovered`. For a
+  job of one of the team's projects it looks at recent commits in the job's repo, and at `lineage
+  impact` for who is affected. Every alert from another bot about a job it assesses gets a reply.
+- **Post.** The agent writes only `decisions.json` and runs `watch.py post`, the only thing that
+  talks to Telegram: one HTML summary per run, grouped Needs attention / Stuck / Passing blips /
+  Recovered, with the owner mentioned on attention and stuck; at most 5 replies per job, one second
+  apart. It keeps the message ids for later replies and records the report in the action journal.
+- **Owners.** `knowledge/jenkins-owners.yaml`: ordered job-name patterns → a project key (or `infra`
+  / `other`) and a `people.yaml` key; first match wins. A mention is the person's
+  `telegram_username`, or a link to their `telegram_chat_id`.
+- **Permissions** (`service/jenkins-watch/.claude/settings.json`): `dontAsk`; extra directories
+  `/srv/repos` and `~/.local/share/agent-ops/jenkins-watch`. Allowed: Read, Grep, Glob;
+  `git -C /srv/repos/* grep|log|show|ls-files`; `lineage upstream|impact`; `watch.py post`; Write of
+  `decisions.json` only (Write and Edit); the Jenkins read tools. Denied: the Jenkins write tools, Web, and any other file write (don't-ask mode; an `Edit` deny would block
+  `Write` too, since Edit rules cover every file-writing tool). MCP:
+  Jenkins only (`mcp.template.json`). Journal identity: the triage bot's token.
+- **Tests.** `tests/jenkins-watch.test.py` (a fake Jenkins MCP and a fake Telegram): idle when quiet;
+  a new failure and a stuck build with project and owner; no write tool called; the poller (watched
+  chat only, offset kept, `chats`); an alert linked to its job; post (one summary in the topic, the
+  owner mentioned, a reply to the alert, ids kept, decisions consumed, journaled); `recovered`; a
+  blip nobody heard of closing quietly; the precheck path; unreachable Jenkins giving exit 3.
+  `tests/run-agent.test.sh` checks Sonnet, 40 turns and that its precheck always runs.
+
 ## agent-mcp
 
 **Job.** A teammate's agent asks about any part of a project it can't see itself; a read-only
@@ -239,6 +288,7 @@ headless agent investigates and answers in English with sources. It explains; it
 | agent → another team | `handoff`: a new `Inbox` item + "blocked by" |
 | release → people | commit status, a merge request comment, `e2e:green`/`e2e:red` |
 | nightly → people | `Findings` items, the report, private messages |
+| jenkins-watch → people | one summary per change in the team's Telegram topic, owners mentioned, replies to CI alerts |
 | anyone → anyone's agent | agent-mcp `ask`, `send_message` |
 
 ## Cost and safety controls

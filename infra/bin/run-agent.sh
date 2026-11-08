@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Runs one tick of a service agent (triage | analyst | release | nightly). Called by its systemd timer (Linux VM) or
+# Runs one tick of a service agent (triage | analyst | release | nightly | jenkins-watch). Called by its systemd timer (Linux VM) or
 # launchd agent (macOS host). One run at a time per agent; pulls agent-ops and the read-only repo
 # clones first; appends the JSON result to a daily log.
 set -euo pipefail
-AGENT="${1:?usage: run-agent.sh <triage|analyst|release|nightly>}"
-case "$AGENT" in triage|analyst|release|nightly) ;; *) echo "unknown agent $AGENT" >&2; exit 1;; esac
+AGENT="${1:?usage: run-agent.sh <triage|analyst|release|nightly|jenkins-watch>}"
+case "$AGENT" in triage|analyst|release|nightly|jenkins-watch) ;; *) echo "unknown agent $AGENT" >&2; exit 1;; esac
 
 # launchd has no EnvironmentFile: load the env file ourselves when it is given.
 if [ -n "${AGENT_OPS_ENV:-}" ]; then
@@ -50,6 +50,9 @@ case "$AGENT" in
   triage)  MODEL="${AGENT_MODEL_TRIAGE:-sonnet}";  TURNS="${AGENT_MAX_TURNS_TRIAGE:-${AGENT_MAX_TURNS:-80}}";;
   # One deep analysis per run (root cause / plan with evidence): Opus, room to query and read.
   analyst) MODEL="${AGENT_MODEL_ANALYST:-opus}";   TURNS="${AGENT_MAX_TURNS_ANALYST:-150}";;
+  # Assesses Jenkins failures and posts a short report to the team's Telegram topic (only when
+  # infra/jenkins-watch/watch.py collect, its precheck, found something new).
+  jenkins-watch) MODEL="${AGENT_MODEL_JENKINS_WATCH:-sonnet}"; TURNS="${AGENT_MAX_TURNS_JENKINS_WATCH:-40}";;
   release) MODEL="${AGENT_MODEL_RELEASE:-sonnet}"; TURNS="${AGENT_MAX_TURNS_RELEASE:-${AGENT_MAX_TURNS:-40}}";;
   nightly) MODEL="${AGENT_MODEL_NIGHTLY:-sonnet}"; TURNS="${AGENT_MAX_TURNS_NIGHTLY:-300}";;
 esac
@@ -79,7 +82,7 @@ fi
 # from our own run logs (the agents' login token can't read the plan's usage). Over budget → skip
 # and alert once per 5 h. AGENT_BUDGET_5H_USD=off disables it.
 if [ "$BUDGET" != off ]; then
-  spent="$({ find "$LOG_ROOT/triage" "$LOG_ROOT/analyst" "$LOG_ROOT/release" "$LOG_ROOT/nightly" -maxdepth 1 -name '*.jsonl' -mtime -2 2>/dev/null || true; } \
+  spent="$({ find "$LOG_ROOT/triage" "$LOG_ROOT/analyst" "$LOG_ROOT/release" "$LOG_ROOT/nightly" "$LOG_ROOT/jenkins-watch" -maxdepth 1 -name '*.jsonl' -mtime -2 2>/dev/null || true; } \
     | while read -r f; do cat "$f"; done \
     | jq -Rn --argjson since "$((now - 18000))" '[inputs | fromjson? | select(type == "object")
         | select(((.started // "") | try fromdateiso8601 catch 0) >= $since)
@@ -97,7 +100,7 @@ fi
 
 if [ "${AGENT_GIT_PULL:-on}" != off ]; then
   git -C "$ROOT" pull -q --ff-only || echo "$(ts) agent-ops pull failed, running last version" >&2
-  if [ "$AGENT" = "triage" ] || [ "$AGENT" = "analyst" ] || [ "$AGENT" = "nightly" ]; then
+  if [ "$AGENT" = "triage" ] || [ "$AGENT" = "analyst" ] || [ "$AGENT" = "nightly" ] || [ "$AGENT" = "jenkins-watch" ]; then
     # From GitLab with the agents' read-only tokens (repo-sync.sh); a failed pull keeps the last copy.
     bash "$ROOT/infra/bin/repo-sync.sh" pull "$REPOS_DIR"/*/ || echo "$(ts) repo pull failed for some of $REPOS_DIR, running on the last copy" >&2
   fi
@@ -105,11 +108,13 @@ fi
 
 # Skip idle ticks without starting Claude (the agents share a Claude plan's usage limits).
 # precheck.sh: 0 = work, 1 = idle, other = check failed → run anyway. At least one full run every
-# AGENT_MAX_IDLE_HOURS (default 6) regardless, as a safety net.
+# AGENT_MAX_IDLE_HOURS (default 6) regardless, as a safety net. jenkins-watch has no such net: its
+# precheck (watch.py collect) also writes the facts the agent reads, so it runs on every tick.
 LAST_RUN_FILE="$LOG_DIR/last-run-at"
 since="$(cat "$LAST_RUN_FILE" 2>/dev/null || echo 1970-01-01T00:00:00Z)"
 max_idle_s=$(( ${AGENT_MAX_IDLE_HOURS:-6} * 3600 ))
 since_epoch="$(date -j -u -f %Y-%m-%dT%H:%M:%SZ "$since" +%s 2>/dev/null || date -u -d "$since" +%s 2>/dev/null || echo 0)"
+if [ "$AGENT" = jenkins-watch ]; then since_epoch="$(date -u +%s)"; fi
 if [ "${AGENT_PRECHECK:-on}" != off ] && [ $(( $(date -u +%s) - since_epoch )) -lt "$max_idle_s" ]; then
   set +e; reason="$(bash "$ROOT/infra/bin/precheck.sh" "$AGENT" "$since" 2>>"$LOG_DIR/precheck.err")"; pc=$?; set -e
   if [ "$pc" -eq 1 ]; then
@@ -138,7 +143,7 @@ RUN_ID="$AGENT-$(date -u +%Y%m%dT%H%M%S)-$$"
 export AGENT_NAME="$AGENT" AGENT_RUN_ID="$RUN_ID" AGENT_JOURNAL_CLIENT=service
 export AGENT_JOURNAL_URL="${AGENT_JOURNAL_URL:-http://127.0.0.1:${AGENT_MCP_PORT:-8765}/journal}"
 case "$AGENT" in
-  triage|analyst) AGENT_JOURNAL_TOKEN="${TRACKER_TRIAGE_TOKEN:-}";;
+  triage|analyst|jenkins-watch) AGENT_JOURNAL_TOKEN="${TRACKER_TRIAGE_TOKEN:-}";;
   release)        AGENT_JOURNAL_TOKEN="${TRACKER_RELEASE_TOKEN:-}";;
   nightly)        AGENT_JOURNAL_TOKEN="${TRACKER_NIGHTLY_TOKEN:-}";;
 esac

@@ -7,7 +7,8 @@ tool (Claude Code, Cursor, Codex or Kimi) on the machine that will be the agent 
 1. **Asks every question first**, in one go: your team (generic keys, roles, emails, time zones),
    which AI tool each person uses, your task board and code hosts, your projects and repos, the host's
    operating system, which service agents to run, their schedules and models, the budget, and which
-   optional parts you want (notifications, desks, a self-hosted Plane, data sources).
+   optional parts you want (notifications, desks, a self-hosted Plane, data sources, the Jenkins
+   watcher).
 2. **Writes your configuration**: `routing.yaml`, `projects.yaml`, `people.yaml` (git-ignored),
    `knowledge/lineage.yaml`, the env file skeleton.
 3. **Has you enter every secret yourself**, with hidden input in your own terminal, never in chat:
@@ -32,3 +33,5 @@ change.
   token for it.
 - Your code host(s): GitLab or GitHub, and the right to create bot accounts or tokens.
 - Optional: read-only users for your databases and warehouse, a Telegram bot, a Figma token.
+- For the optional Jenkins watcher: a Jenkins MCP server with a read-only user, and a Telegram
+  group with a topic the bot may post in.

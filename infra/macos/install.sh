@@ -17,6 +17,9 @@
 #                                                 days: 0=Sunday … 6=Saturday)
 #   WAKE=true                                     instant triage from task-board webhooks (wake.py, :8766)
 #   AGENT_MCP=true                                the project Q&A + action journal server (127.0.0.1:8765)
+#   JENKINS_WATCH=true JENKINS_WATCH_INTERVAL=900 the Jenkins watcher agent (follows ENABLE_TIMERS) and its
+#                                                 Telegram poller (every 60 s, loaded at once;
+#                                                 infra/jenkins-watch/README.md)
 #   BACKUP=true BACKUP_AT=03:15 OFFSITE_DIR=…     nightly backup of the task board, n8n and the agents' config
 #   TUNNEL=true TUNNEL_TARGET=… TUNNEL_FORWARDS=… SSH local forwards to data sources (tunnel.sh)
 #   PUBLISH_TUNNEL=true TUNNEL_TARGET=… PUBLISH_PORT=8090 PUBLISH_LOCAL_PORT=80
@@ -132,8 +135,10 @@ calendar() {
 }
 
 # 5. Interval agents (systemd: agent-<name>.timer). Schedules stay off until each agent passed its
-# manual test run (SETUP.md); ENABLE_TIMERS=true loads them.
-for spec in ${AGENTS:-triage:300 analyst:600 release:900}; do
+# manual test run (SETUP.md); ENABLE_TIMERS=true loads them. JENKINS_WATCH=true adds the Jenkins watcher.
+agent_specs="${AGENTS:-triage:300 analyst:600 release:900}"
+if [ "${JENKINS_WATCH:-false}" = "true" ]; then agent_specs="$agent_specs jenkins-watch:${JENKINS_WATCH_INTERVAL:-900}"; fi
+for spec in $agent_specs; do
   a="${spec%%:*}"; interval="${spec##*:}"
   if [ "${ENABLE_TIMERS:-false}" = "true" ]; then
     load "$HERE/agent.plist.template" "agent-$a" -e "s|__AGENT__|$a|g" -e "s|__INTERVAL__|$interval|g"
@@ -162,6 +167,13 @@ fi
 # at AGENT_MCP_PUBLIC_URL; infra/agent-mcp/README.md).
 if [ "${AGENT_MCP:-false}" = "true" ]; then
   load "$SRC_ROOT/infra/agent-mcp/agent-mcp.plist.template" agent-mcp
+fi
+
+# 8b. Jenkins watcher's Telegram poller (every 60 s): keeps the watched topic's messages, and lists the
+# groups and topics the bot sees (`python3 infra/telegram/poll.py chats`) for TELEGRAM_WATCH_CHAT_ID /
+# TELEGRAM_WATCH_TOPIC_ID. Loaded at once, so the ids can be found before the agent's schedule is on.
+if [ "${JENKINS_WATCH:-false}" = "true" ]; then
+  load "$HERE/telegram-poll.plist.template" telegram-poll
 fi
 
 # 9. Nightly backup of the task board, n8n and the agents' config (restore: infra/macos/README.md).

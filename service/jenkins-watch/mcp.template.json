@@ -1,0 +1,23 @@
+{
+  "_comment": "Rendered into .mcp.json (git-ignored) by infra/bin/render-mcp.py before every tick. Jenkins only, with the read-only Jenkins user; left out when its variables are empty.",
+  "mcpServers": {
+    "jenkins": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "${JENKINS_MCP_URL}",
+        "--allow-http",
+        "--header",
+        "Authorization:${JENKINS_RO_AUTH}"
+      ],
+      "env": {
+        "JENKINS_RO_AUTH": "${JENKINS_RO_AUTH}"
+      },
+      "requires": [
+        "JENKINS_MCP_URL",
+        "JENKINS_RO_AUTH"
+      ]
+    }
+  }
+}

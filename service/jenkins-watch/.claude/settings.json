@@ -1,0 +1,81 @@
+{
+  "permissions": {
+    "defaultMode": "dontAsk",
+    "additionalDirectories": [
+      "/srv/repos",
+      "~/.local/share/agent-ops/jenkins-watch"
+    ],
+    "allow": [
+      "Read",
+      "Grep",
+      "Glob",
+      "Bash(git -C /srv/repos/* grep *)",
+      "Bash(git -C /srv/repos/* log *)",
+      "Bash(git -C /srv/repos/* show *)",
+      "Bash(git -C /srv/repos/* ls-files*)",
+      "Bash(/srv/agent-ops/infra/bin/lineage upstream *)",
+      "Bash(/srv/agent-ops/infra/bin/lineage impact *)",
+      "Bash(python3 /srv/agent-ops/infra/jenkins-watch/watch.py post)",
+      "Write(~/.local/share/agent-ops/jenkins-watch/decisions.json)",
+      "Edit(~/.local/share/agent-ops/jenkins-watch/decisions.json)",
+      "mcp__jenkins__getJob",
+      "mcp__jenkins__getJobs",
+      "mcp__jenkins__getBuild",
+      "mcp__jenkins__getBuildLog",
+      "mcp__jenkins__searchBuildLog",
+      "mcp__jenkins__getStatus",
+      "mcp__jenkins__getTestResults",
+      "mcp__jenkins__getFlakyFailures"
+    ],
+    "deny": [
+      "NotebookEdit",
+      "WebFetch",
+      "WebSearch",
+      "Bash(git * --open-files-in-pager*)",
+      "Bash(git * --config-env*)",
+      "Bash(git * --exec-path*)",
+      "Bash(git * --no-index*)",
+      "Bash(git * --output*)",
+      "mcp__jenkins__triggerBuild",
+      "mcp__jenkins__rebuildBuild",
+      "mcp__jenkins__replayBuild",
+      "mcp__jenkins__updateBuild"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/../../plugins/core/scripts/guard.sh",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|Artifact.*|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/../../plugins/core/scripts/journal.sh pre",
+            "timeout": 8
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash|Artifact.*|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/../../plugins/core/scripts/journal.sh post",
+            "timeout": 8
+          }
+        ]
+      }
+    ]
+  }
+}

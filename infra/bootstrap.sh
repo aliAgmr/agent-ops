@@ -17,6 +17,9 @@
 #                                                 syntax, the host's local time)
 #   WAKE=true                                     instant triage from task-board webhooks (agent-wake, :8766)
 #   AGENT_MCP=true AGENT_MCP_HOST=127.0.0.1       the project Q&A + action journal server (:8765)
+#   JENKINS_WATCH=true JENKINS_WATCH_INTERVAL=900 the Jenkins watcher agent (follows ENABLE_TIMERS) and its
+#                                                 Telegram poller (telegram-poll.timer, started at once;
+#                                                 infra/jenkins-watch/README.md)
 #   BACKUP=true BACKUP_ONCALENDAR="*-*-* 03:15" OFFSITE_DIR=…  nightly backup (infra/macos/backup.sh)
 #   TUNNEL=true TUNNEL_TARGET=… TUNNEL_FORWARDS=… SSH local forwards to data sources (tunnel.sh)
 #   PUBLISH_TUNNEL=true TUNNEL_TARGET=… PUBLISH_PORT=8090 PUBLISH_LOCAL_PORT=80
@@ -40,6 +43,7 @@ UNITS=/etc/systemd/system
 SYSTEMD="$HERE/systemd"
 CLAUDE_CODE_VERSION="${CLAUDE_CODE_VERSION:-stable}"
 AGENTS="${AGENTS:-triage:300 analyst:600 release:900}"
+if [ "${JENKINS_WATCH:-false}" = "true" ]; then AGENTS="$AGENTS jenkins-watch:${JENKINS_WATCH_INTERVAL:-900}"; fi
 log() { echo "[bootstrap] $*"; }
 as_agents() { runuser -u "$AGENT_USER" -- "$@"; }
 
@@ -165,6 +169,12 @@ if [ "${NIGHTLY:-false}" = "true" ]; then
 fi
 if [ "${WAKE:-false}" = "true" ]; then
   install -m 644 "$SYSTEMD/agent-wake.service" "$UNITS/"; enable_now+=(agent-wake.service)
+fi
+if [ "${JENKINS_WATCH:-false}" = "true" ]; then
+  # The poller starts at once, so `python3 infra/telegram/poll.py chats` can find the group's ids
+  # before the agent's timer is on.
+  install -m 644 "$SYSTEMD/telegram-poll.service" "$SYSTEMD/telegram-poll.timer" "$UNITS/"
+  enable_now+=(telegram-poll.timer)
 fi
 if [ "${AGENT_MCP:-false}" = "true" ]; then
   render "$SYSTEMD/agent-mcp.service" agent-mcp.service -e "s|__AGENT_MCP_HOST__|${AGENT_MCP_HOST:-127.0.0.1}|g" -e "s|__UV__|$UV|g"

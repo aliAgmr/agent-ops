@@ -1,0 +1,20 @@
+# Reads the team bot's Telegram updates once (infra/telegram/poll.py) and keeps the watched topic's
+# messages for the Jenkins watcher. Started every minute by telegram-poll.timer (JENKINS_WATCH=true).
+[Unit]
+Description=agent-ops Telegram poller (Jenkins watcher)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=agents
+Group=agents
+EnvironmentFile=/etc/agent-ops/env
+Environment=AGENT_OPS_ENV=/etc/agent-ops/env
+Environment=AGENT_OPS_ROOT=/srv/agent-ops
+ExecStart=/usr/bin/python3 -I /srv/agent-ops/infra/telegram/poll.py
+TimeoutStartSec=5min
+Nice=5
+NoNewPrivileges=true
+ProtectSystem=full
+ReadWritePaths=/home/agents

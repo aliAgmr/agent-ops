@@ -45,7 +45,7 @@ HERE = Path(__file__).resolve().parent
 LOGS = Path(os.environ.get("AGENT_LOG_ROOT") or ("~/Library/Logs/agent-ops" if sys.platform == "darwin" else "/var/log/agents")).expanduser()
 TRANSCRIPTS = Path("~/.claude/projects").expanduser()
 MCP_DB = Path(os.environ.get("AGENT_MCP_DATA_DIR", "~/.local/share/agent-mcp")).expanduser() / "agent-mcp.sqlite3"
-AGENTS = ["triage", "analyst", "release", "nightly"]
+AGENTS = ["triage", "analyst", "release", "nightly", "jenkins-watch"]
 DAYS = 30
 NOW = dt.datetime.now(dt.timezone.utc)
 SINCE = NOW - dt.timedelta(days=DAYS)
