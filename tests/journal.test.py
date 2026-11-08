@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import os
 import socket
+import socketserver
 import subprocess
 import sys
 import tempfile
@@ -147,9 +148,17 @@ class Sink(BaseHTTPRequestHandler):
         self.wfile.write(b'{"ok":true}')
 
 
+class FakeServer(ThreadingHTTPServer):
+    """ThreadingHTTPServer without HTTPServer's reverse-DNS lookup of the bind address
+    (socket.getfqdn), which can take ~35 s, e.g. on GitHub's macOS runners."""
+    def server_bind(self):
+        socketserver.TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
+
+
 def serve(handler):
     port = free_port()
-    s = ThreadingHTTPServer(("127.0.0.1", port), handler)
+    s = FakeServer(("127.0.0.1", port), handler)
     threading.Thread(target=s.serve_forever, daemon=True).start()
     return port
 

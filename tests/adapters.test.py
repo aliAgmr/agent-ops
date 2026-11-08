@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import os
+import socketserver
 import subprocess
 import sys
 import tempfile
@@ -135,7 +136,15 @@ class Fake(BaseHTTPRequestHandler):
     def do_DELETE(self): self.handle_any("DELETE")
 
 
-srv = ThreadingHTTPServer(("127.0.0.1", 0), Fake)
+class FakeServer(ThreadingHTTPServer):
+    """ThreadingHTTPServer without HTTPServer's reverse-DNS lookup of the bind address
+    (socket.getfqdn), which can take ~35 s, e.g. on GitHub's macOS runners."""
+    def server_bind(self):
+        socketserver.TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
+
+
+srv = FakeServer(("127.0.0.1", 0), Fake)
 threading.Thread(target=srv.serve_forever, daemon=True).start()
 URL = f"http://127.0.0.1:{srv.server_address[1]}"
 CFG = {"tracker": "plane", "code_hosts": {"main": {"type": "gitlab", "url": f"{URL}/gl"},

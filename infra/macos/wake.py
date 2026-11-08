@@ -19,6 +19,7 @@ Settings (environment, or the env file AGENT_OPS_ENV, default ~/.config/agent-op
 """
 import hmac
 import os
+import socketserver
 import subprocess
 import sys
 import threading
@@ -199,11 +200,19 @@ class Handler(BaseHTTPRequestHandler):
         self.reply(202, "queued")
 
 
+class Server(ThreadingHTTPServer):
+    """ThreadingHTTPServer without HTTPServer's reverse-DNS lookup of the bind address
+    (socket.getfqdn), which can take ~35 s, e.g. on GitHub's macOS runners."""
+    def server_bind(self):
+        socketserver.TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
+
+
 def main():
     if not TOKEN:
         log(f"WAKE_TOKEN is not set (env or {ENV_FILE}); every wake will be rejected")
     threading.Thread(target=WAKER.loop, daemon=True).start()
-    srv = ThreadingHTTPServer((BIND, PORT), Handler)
+    srv = Server((BIND, PORT), Handler)
     log(f"listening on {BIND}:{PORT}, agents={','.join(sorted(AGENTS))}, debounce={DEBOUNCE:g}s")
     try:
         srv.serve_forever()
