@@ -164,9 +164,16 @@ check(s.get("kind") == "stuck" and s.get("running_min") == 90 and s.get("usual_m
 check(not any(c in MCP_CALLS for c in ("triggerBuild", "rebuildBuild", "replayBuild", "updateBuild")),
       "read-only: no Jenkins write tool was called", MCP_CALLS)
 
-# --- 3. same state again → idle (an unchanged incident isn't reposted)
+# --- 3. the agent's run failed (nothing posted): the unassessed incidents are offered again
+first = set(ev)
 rc, out = collect()
-check(rc == 1, "unchanged incidents: idle", out)
+check(rc == 0 and {e["job"] for e in facts()["events"]} == first and all(e.get("retry") for e in facts()["events"]),
+      "a run that didn't post: the same incidents come back (retry)", facts()["events"])
+(T / "jw" / "decisions.json").write_text(json.dumps({"items": []}))   # assessed, nothing worth posting
+rc, out = run(str(ROOT / "infra/jenkins-watch/watch.py"), "post")
+check(rc == 0 and not SENT, "post with no items sends nothing", SENT)
+rc, out = collect()
+check(rc == 1, "after an assessment, unchanged incidents stay quiet (idle)", out)
 
 # --- 4. the Jenkins bot's alert in the topic is stored by poll.py and linked to the incident
 UPDATES.extend([

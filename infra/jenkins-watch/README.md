@@ -34,7 +34,9 @@ skipped.
 
 The agent's **verdicts** are `attention` (owner mentioned), `stuck` (owner mentioned), `transient`
 (a passing blip, such as a dropped connection the next build fixed) and `recovered`. An unchanged
-incident is never reposted, and a failure that recovers before anyone was told closes quietly.
+incident is never reposted, and a failure that recovers before anyone was told closes quietly. An
+incident no run has assessed yet (the agent failed, or never posted) is offered again on the next
+check, so a failed run can't lose a report.
 
 **Project and owner** come from `knowledge/jenkins-owners.yaml`: ordered job-name patterns → a
 project key (or `infra` / `other`) and a `people.yaml` key. A mention is the person's
