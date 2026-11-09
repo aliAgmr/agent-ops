@@ -22,7 +22,8 @@ production. Adjust the branch names and deploy steps to your repos; keep the rul
 1. Task is assigned to your human, in `Todo` (see `scope-guard`). Move to `In Progress`.
 2. Branch from `dev`. Implement, following the repo's conventions for errors, enums, fields and
    user-facing text (put team-specific ones in a skill of your own).
-3. Tests: follow `e2e-tests` (a separate agent writes the E2E tests; run the related suites).
+3. Tests: follow `e2e-tests` (a separate agent writes the E2E tests; run the related suites). Fix the
+   code, not the check: edits to `BUGS.md`, CI, lint or type config ask your person first (`scope-guard` rule 10).
 4. **Database migrations** ship in the MR; the deploy runs them before the new version starts
    serving, so a migration runs **while the old version is still serving**.
    Never drop, rename or retype something the running version reads. Use **expand → contract**:

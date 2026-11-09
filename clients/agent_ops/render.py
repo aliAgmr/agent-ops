@@ -251,8 +251,8 @@ def codex(cfg: dict, plugins: list, warn, owned: dict) -> dict:
         hooks[ev] = groups
         if not groups:
             del hooks[ev]
-    hooks.setdefault("PreToolUse", []).append({
-        "matcher": "^(Bash|exec_command|shell|local_shell|mcp__.*)$",
+    hooks.setdefault("PreToolUse", []).append({   # guard: shell, file patches (apply_patch) and MCP
+        "matcher": "^(Bash|exec_command|shell|local_shell|apply_patch|mcp__.*)$",
         "hooks": [{"type": "command", "command": hook_cmd("codex", "guard", "--client", "codex"),
                    "timeout": 30, "statusMessage": "agent-ops guard"}]})
     for ev, phase in (("PreToolUse", "pre"), ("PostToolUse", "post")):   # action journal

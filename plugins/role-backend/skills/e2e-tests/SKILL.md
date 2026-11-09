@@ -26,10 +26,15 @@ repo's specifics (commands, suite names, personas) in that doc, not here.
 4. **A red test means the code is wrong until proven otherwise.** Investigate the code first. Only
    change a test when it is provably wrong (contradicts the spec/route description, or its own
    assumption is false) — and say which test, why, and what changed. Never loosen an assertion to
-   get green.
+   get green. Before changing a failing check, name the harm it protects against and whether that
+   harm is present in this change.
 5. **Run the related E2E tests before calling a change done** — not the full suite. Report the
    result: counts, any failure and its cause. The full suite runs in CI (nightly and on merge
    requests into `main`); run it locally only when asked or when the change is cross-cutting.
+6. **`BUGS.md` and the test/CI config need your person's OK.** Adding a row to `BUGS.md` turns a
+   red test into a known bug, so the core guard asks the person before any edit to it (and to the
+   CI file, `tsconfig*.json`, lint and test-runner config). Say in the request which row and why
+   (the bug, its `BUG-0xx`, the fix that removes it). Service agents can't edit them at all.
 
 **Never** point a run at a shared stage or production database. The runner should refuse to; don't
 work around that guard.

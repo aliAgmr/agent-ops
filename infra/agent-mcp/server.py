@@ -291,7 +291,29 @@ class Redactor:
         for v in sorted({*self.values(), *(e for e in extra if e and len(e) >= self.MIN)}, key=len, reverse=True):
             if v in s:
                 s = s.replace(v, "[redacted]")
+        for rx, repl in SECRET_SHAPES:
+            s = rx.sub(repl, s)
         return s
+
+
+# Secrets by shape, for values the env file doesn't know (a teammate's own token in a journal
+# record or an answer). The same kinds plugins/core/scripts/guard.sh rule 10 blocks; here they are
+# blanked instead. Credential URLs and auth headers keep their prefix so the text stays readable.
+SECRET_SHAPES: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(r"gl(?:pat|dt|rt|ptt|ft|imt|oas|cbt|soat|ffct|agent)-[A-Za-z0-9_-]{20,}"), "[redacted]"),
+    (re.compile(r"gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{60,}"), "[redacted]"),
+    (re.compile(r"plane_api_[A-Za-z0-9]{32,}"), "[redacted]"),
+    (re.compile(r"(?<![A-Za-z0-9_-])sk-(?:ant-[a-z0-9]+-|proj-)?[A-Za-z0-9_-]{32,}"), "[redacted]"),
+    (re.compile(r"(?<![A-Z0-9])(?:AKIA|ASIA)[0-9A-Z]{16}(?![A-Z0-9])"), "[redacted]"),
+    (re.compile(r"-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----.*?(?:-----END (?:[A-Z0-9]+ )*PRIVATE KEY-----|$)", re.S), "[redacted]"),
+    (re.compile(r"eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}"), "[redacted]"),
+    (re.compile(r"\b[0-9]{8,10}:AA[A-Za-z0-9_-]{33}"), "[redacted]"),
+    (re.compile(r"(hooks\.slack\.com/services/)[A-Za-z0-9/]{20,}"), r"\1[redacted]"),
+    (re.compile(r"(/hooks/)[a-z0-9]{26}(?![a-z0-9])"), r"\1[redacted]"),
+    (re.compile(r"([A-Za-z][A-Za-z0-9+.-]*://[^/\s:@\"]+:)[^/\s@\"]{6,}@"), r"\1[redacted]@"),
+    (re.compile(r"((?:[Aa]uthorization|X-API-Key|X-Api-Key|x-api-key|PRIVATE-TOKEN|Private-Token)\"?:\s*\"?"
+                r"(?:[Bb]asic |[Bb]earer |[Tt]oken )?)[A-Za-z0-9+/._=-]{20,}"), r"\1[redacted]"),
+]
 
 
 # ----------------------------------------------------------------------------------------- auth

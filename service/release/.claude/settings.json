@@ -61,7 +61,7 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash|mcp__.*",
+        "matcher": "Bash|Write|Edit|MultiEdit|NotebookEdit|Artifact.*|mcp__.*",
         "hooks": [
           {
             "type": "command",

@@ -310,7 +310,7 @@ def cmd_check(a):
                   {"tool_name": "Bash", "tool_input": {"command": "ls"}}, True),
                  ({"mcp_server_name": "postgres", "tool_name": "postgres_mcp_modify", "tool_input": "{}"} if client == "cursor" else
                   {"tool_name": "mcp__postgres__postgres_mcp_modify", "tool_input": {}}, False)]
-        good = all(G.verdict(G.normalize(client, ev), cfg["role"])[0] == allow for ev, allow in cases)
+        good = all((G.verdict(G.normalize(client, ev), cfg["role"])[0] == "allow") == allow for ev, allow in cases)
         line(good, f"{client} guard", "blocks push to main and DB writes, allows ls" if good else "unexpected verdict")
     # Client files
     if "cursor" in cfg.get("clients", []):
