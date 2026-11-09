@@ -152,6 +152,7 @@ LABELS=(
   "source:agent|#6B7280" "source:human|#A3A3A3"
   "lesson|#F43F5E" "directive|#7C3AED"
   "source:nightly|#FB923C" "out-of-pipeline|#64748B"
+  "out-of-scope|#9CA3AF"     # a declined request; its [decision] comment says why (task-protocol)
   # effort (set by triage, exactly one per assessed item): xs <2h, s up to 1 day, m 1–3 days, l 3 days–1 week, xl >1 week
   "effort:xs|#BBF7D0" "effort:s|#86EFAC" "effort:m|#FDE047" "effort:l|#FDBA74" "effort:xl|#F87171"
   # deep analysis before routing (bugs and features of effort s+): triage queues, the analyst agent writes it

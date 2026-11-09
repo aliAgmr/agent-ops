@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# What a merge request removes from the API contract and the access checks, and risky additions
+# (infra/quality/mr_scan.py; patterns: knowledge/contract-patterns.yaml). Read-only.
+#   mr-scan <repo-path> <iid>   (the repo's routing.yaml `path`; GitLab MR iid or GitHub PR number)
+exec uv run -q --no-project --with pyyaml==6.0.2 python -I "$(cd "$(dirname "$0")" && pwd)/../quality/mr_scan.py" "$@"

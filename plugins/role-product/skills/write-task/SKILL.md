@@ -22,8 +22,11 @@ A good task lets the triage agent route it without asking, and lets every team k
    - Goal: who + what decision + why now.
    - Context/links: screenshots, BI questions, the business rule in plain words, examples with
      real numbers.
+   - Current / desired behaviour (bugs and changes): what happens today, what should happen.
    - Acceptance criteria: observable and testable. Name the role that sees it, the page, the
      field, the filter, the edge cases (empty month, no data, negative values), dates and time zones.
+   - Out of scope: what this task deliberately leaves out (other roles, export, the mobile view,
+     a follow-up metric), so nobody adds it "while they're at it". Required for features.
 5. **State, labels:** `Inbox`, `source:human`. Don't set the team: triage does.
    An approver may set the priority directly (triage keeps it).
 6. Show the user the final text before creating it.
@@ -35,3 +38,7 @@ A good task lets the triage agent route it without asking, and lets every team k
 - [ ] Says which roles can see it and which can't.
 - [ ] Says what happens with no data.
 - [ ] Dates say which calendar, period and time zone the UI uses.
+- [ ] Out of scope lists what a developer might reasonably add but shouldn't.
+
+Before writing a new request, check whether a similar one was declined (`Cancelled` with label
+`out-of-scope`, see `task-protocol` "Declining a request"); if so, show the user that decision first.

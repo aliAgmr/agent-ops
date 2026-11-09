@@ -10,7 +10,9 @@ if nothing says, in the project of the task or person they match. Keep a running
 complete.
 
 1. **Read** `RUN_DIR/facts.json`, `RUN_DIR/checks.json`, `RUN_DIR/traps.json` (data-trap
-   checks) and `RUN_DIR/lineage.json` (lineage problems), and the context files in CLAUDE.md.
+   checks), `RUN_DIR/lineage.json` (lineage problems), `RUN_DIR/waivers.json` (checks people
+   keep waiving) and `RUN_DIR/signals.json` (rework in the service agents' runs), and the context
+   files in CLAUDE.md.
 
 2. **Other systems since `SINCE`** (read-only; keep each to a few calls):
    Skip a system your deployment didn't configure (its MCP server is absent) and say so in
@@ -67,10 +69,15 @@ complete.
      (`stale:<db.table>`), broken BI questions (`mb-broken:<id>`);
    - from `traps.json` (data traps): each check in `blocking` or `notify` (`trap:<id>`; its value, expect,
      `why` and tables; priority from its `severity`), and each `unreadable` check (`trap-unreadable:<id>`,
-     priority `low`: a check that can't run is not a pass). From `lineage.json`: each `problems`
+     priority `low`: a check that can't run is not a pass). Checks in `baselined` are known
+     violations (`knowledge/trap-baseline.yaml`): not findings. Each check in `stale_baseline`
+     passes again but still has a baseline entry (`trap-baseline-stale:<id>`, priority `low`:
+     remove the entry so the violation can't come back unnoticed). From `waivers.json`: each id
+     waived on 3+ MRs in 30 days (`waived-often:<id>`, priority `low`, naming the MRs: the check,
+     not the code, probably needs changing). From `lineage.json`: each `problems`
      line (`lineage:<short slug>`, priority `low`: knowledge/lineage.yaml names something that no
-     longer exists, so its owner should update the file). If either file has `error`, say so in
-     the report instead;
+     longer exists, so its owner should update the file). If any of these files has `error`, say
+     so in the report instead;
    - **untracked follow-up work** a change implies but no task covers, e.g. a backend contract
      change with no frontend task, a migration or warehouse DDL with no handover, a BI
      question that reads a column that was just dropped (`followup:<short slug>`).
@@ -88,7 +95,9 @@ complete.
    night); if it was moved on by a human, leave it. For a `Findings` task you created whose
    problem is gone tonight, comment `[agent:nightly] No longer found on <date>; close it if you
    agree.` once. Description: what, where (file:line, package@version, job, table), evidence,
-   why it matters, the likely fix and owner team.
+   why it matters, the likely fix and owner team, with its certainty label from `findings-format`
+   (`confirmed` with a severity, or `needs checking: <the missing fact>`). The report lists what
+   didn't run tonight under **Not checked** (an `error` in any RUN_DIR file, a skipped repo).
 
 7. **Stale and stuck work** (report only, no board changes): `In Progress` with no activity for
    3+ days, `In Review` waiting 2+ days, `Blocked` items (with what they wait on), MRs open 5+
@@ -105,6 +114,11 @@ complete.
      anything or holds open work: **Yesterday** / **Today (in progress)** / **Blocked**) ·
      `## Security and tests` (per repo: tests ✅/❌, dependencies, secrets, code scan; E2E;
      new findings with keys) · `## Data and infra` (CI, warehouse, BI) ·
+     `## Agent runs` (from `signals.json`: one table row per agent with runs, failed, turn_limit,
+     repeated_error, reread, skill_reread, blocked; then the `top` details seen in 2+ runs, one
+     line each with the skill or file it points at and what to change: a clearer skill step, a
+     missing permission, a flaky tool. Counts only: never paste tool output. If `error` is set,
+     say so) ·
      `## Needs a human` (possible matches, anything you weren't sure about) · `## Couldn't check`.
      Link every task (`<TRACKER_BASE_URL>/<workspace>/browse/<KEY>/`, both given at the end of this
      prompt) and MR/PR.

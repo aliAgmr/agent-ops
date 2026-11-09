@@ -10,7 +10,7 @@ journal: as Claude Code plugins, or rendered by the `agent-ops` installer for th
 
 | Plugin | For | Brings |
 |---|---|---|
-| `core` | everyone | skills `task-protocol`, `scope-guard`, `handoff`, `ask-project`, `message-teammate`, `lessons`, `directives`, `blame-and-revert`, `data-traps` (with executable checks), `clickhouse-query-style`; the task-board MCP server and the agent-mcp client; hooks: guard (`PreToolUse`), journal (`PreToolUse` + `PostToolUse`), session notes (`SessionStart`); the `reviewer` subagent |
+| `core` | everyone | skills `task-protocol`, `scope-guard`, `handoff`, `ask-project`, `message-teammate`, `lessons`, `directives`, `blame-and-revert`, `data-traps` (with executable checks), `clickhouse-query-style`, `findings-format`; the task-board MCP server and the agent-mcp client; hooks: guard (`PreToolUse`), journal (`PreToolUse` + `PostToolUse`), edit checks (`PostToolUse`), session notes (`SessionStart`); the `reviewer` subagent |
 | `role-product` | product | skills `write-task`, `prioritise`, `approve` |
 | `role-design` | design | skills `design-handoff`, `design-change-request` |
 | `role-backend` | backend | skills `backend-workflow`, `api-contract`, `e2e-tests`, `figma-to-tasks` |
@@ -37,7 +37,7 @@ plugins/<name>/
   .mcp.json                    MCP servers; secrets as ${user_config.<key>}
   skills/<skill>/SKILL.md      front matter: name, description (when to use it)
   hooks/hooks.json             core only
-  scripts/                     core only: guard.sh, journal.sh, session-notes.sh, the Plane CE shim
+  scripts/                     core only: guard.sh, journal.sh, edit-checks.sh, session-notes.sh, the Plane CE shim
   agents/                      core only: the reviewer subagent
 ```
 
@@ -82,8 +82,12 @@ Service agents don't install plugins: they read `plugins/` from the host's check
 | `blame-and-revert` | `blame`, `suspects`, `lineage`, `revert_plan` through agent-mcp | who changed it, what broke it, undo it |
 | `data-traps` | your team's known data traps, as prose plus executable checks (`checks.yaml`) | before any warehouse query |
 | `clickhouse-query-style` | an example house style for warehouse SQL (attribution comment, CTEs) | writing SQL |
+| `findings-format` | one format for findings: a certainty label on each (`confirmed` with a severity, `needs checking: <the missing fact>`, `rejected` with why), numbered through Must / Should / Nice to fix, a Rejected list, and a **Not checked** line that is never empty by omission | any review, release comment, nightly finding or security pass |
 
-The `reviewer` subagent reviews a diff for defects before a task goes to `In Review`.
+The `reviewer` subagent reviews a diff for defects before a task goes to `In Review`, and reports
+in the `findings-format` layout (`CHANGES NEEDED` when anything is under Must fix). A security
+finding names who could abuse it, the input, the check that should stop it and the result;
+without all four it is `needs checking`.
 
 ## Hooks
 
@@ -91,6 +95,7 @@ The `reviewer` subagent reviews a diff for defects before a task goes to `In Rev
 |---|---|---|---|
 | `PreToolUse` | `Bash\|mcp__.*` | `scripts/guard.sh --role "$CLAUDE_PLUGIN_OPTION_ROLE"` | 10 s |
 | `PreToolUse` | `Bash\|Artifact.*\|mcp__.*` | `scripts/journal.sh pre` | 8 s |
+| `PostToolUse` | `Write\|Edit\|MultiEdit` | `scripts/edit-checks.sh` | 5 s |
 | `PostToolUse` | `Bash\|Artifact.*\|mcp__.*` | `scripts/journal.sh post` | 8 s |
 | `SessionStart` | — | `scripts/session-notes.sh` | 20 s |
 
@@ -99,6 +104,15 @@ The `reviewer` subagent reviews a diff for defects before a task goes to `In Rev
 - `journal.sh` sends each write-looking tool call to agent-mcp's `/journal` with the person's
   task-board token, before (so the old value is saved) and after. It never blocks or prints, and
   spools to a local file when agent-mcp is unreachable.
+- `edit-checks.sh` runs fast, advisory checks on the file an agent just wrote or edited, from
+  `plugins/core/edit-checks.tsv` (one rule per line: id, path globs, a pattern that must match, an
+  optional `also` and `unless`, and the message with the fix). A hit goes back to the agent as
+  context (at most 10 lines), so it fixes a known mistake right away instead of at review; it never
+  blocks, and skips files over 1 MB. The shipped rules are examples matching the example data traps
+  (`any()`/`argMax()` on the payments ledger, a plain `sum(line_total)`, credit notes joined
+  ungrouped, receivables without the channel filter), a view on `select *`, and an error response
+  without an `error` code (`api-contract`); replace them with your team's. The rules file is a
+  protected path (guard rule 11). Claude Code only: the other clients don't render it.
 - `session-notes.sh` prints recurring lessons and open directives (at most ~15 lines, cached an hour).
 
 ## Clients: Cursor, Codex and Kimi (`clients/`)
@@ -119,6 +133,7 @@ agent-ops check
 | MCP servers | plugin `.mcp.json` | `~/.cursor/mcp.json` | `~/.codex/config.toml` | `~/.kimi-code/mcp.json` |
 | Guard hook | plugin hook | `beforeShellExecution`, `beforeMCPExecution` (fail closed) | `PreToolUse` | `PreToolUse` in a managed block of `~/.kimi-code/config.toml` (fails open; backed by `[[permission.rules]]` deny rules) |
 | Journal hook | plugin hooks | before/after shell and MCP | `PreToolUse` / `PostToolUse` | `PreToolUse` / `PostToolUse` |
+| Edit checks | plugin hook (`PostToolUse`) | no | no | no |
 | Session notes | yes | yes | yes | no |
 | macOS / Linux / Windows | yes / yes / yes | yes / yes / yes (PowerShell hook commands) | yes / yes / yes | yes / yes / yes (`$KIMI_CODE_HOME`, default `~/.kimi-code`) |
 

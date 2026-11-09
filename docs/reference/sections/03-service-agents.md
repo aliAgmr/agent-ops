@@ -119,7 +119,9 @@ effort labels, and enforces the review rules.
    processing (to the analyst if it had `analysis:done`).
 
 **The `triage` skill, per item:**
-1. Understand: title, description, comments, attachments, links; related items; duplicates.
+1. Understand: title, description, comments, attachments, links; related items; duplicates; and
+   requests declined before (`Cancelled` + `out-of-scope`, last 12 months): a clear repeat gets a
+   `question` to the approver who declined it, quoting the `[decision]` reason, and stays in `Inbox`.
 2. Queue or skip analysis: a bug or feature of effort `s`+ without `analysis:done` gets
    `analysis:needed` and stays in `Inbox`.
 3. Investigate read-only (time-boxed): repo clones with `git -C /srv/repos/<repo> grep|log|show`,
@@ -178,13 +180,31 @@ status.
    condition and why).
 4. What it reaches: `lineage files <changed paths> --impact` (pages and metrics, listed in the
    comment) and `traps for-files <changed paths>` (the trap checks on every table those files read
-   or feed). A failing `block` check → red; `notify` → a warning; unreadable → at best `pending`.
+   or feed). A failing `block` check → red; `notify` → a warning; unreadable → at best `pending`;
+   a known violation no worse than `knowledge/trap-baseline.yaml` → "known (baseline)"; a check
+   that passes again with a baseline entry still there → Should fix "remove the entry".
 5. Consumed-contract warnings (optional `docs/CONSUMED_CONTRACTS.md` in the repo).
-6. Status via `infra/bin/post-commit-status.sh` (the only status writer, GitLab or GitHub through the
+6. Security pass: `infra/bin/mr-scan <repo-path> <iid>` reads the diff through the code-host
+   adapter (GitLab or GitHub) and lists what the MR removes (routes, DTO fields, permission and
+   role checks, auth plugins) and query texts built with `${…}`, using the patterns in
+   `knowledge/contract-patterns.yaml` (an example for a TypeScript HTTP backend: adapt it). Then
+   the agent reads the files that matter for access, input, SQL and secrets. A finding needs who,
+   the input, the check and the result; confirmed high → red. A scan error is "Not checked".
+7. The diff against the linked tasks (warnings): changes no task explains, removals no task or
+   handoff doc mentions, and work a task's Out of scope excludes.
+8. Waivers: a person comments `waive <id>: <reason>`; `infra/bin/waivers add` decides whether it
+   counts (a person from `people.yaml`, not a service account; a specific reason of 20+
+   characters and 4+ words, not boilerplate or copied from another MR; at most 3 per MR) and keeps
+   the ledger (`~/.local/share/agent-ops/waivers.jsonl`).
+9. Status via `infra/bin/post-commit-status.sh` (the only status writer, GitLab or GitHub through the
    code-host adapter; it refuses repos not in `routing.yaml`, skips a status that's already there,
    and records the old status in the journal).
-7. Comment on the merge request; label linked items `e2e:green` or `e2e:red` (red: owning items back
-   to `In Progress`); after the merge, linked green items to `Done`.
+10. Comment on the merge request in the `findings-format` layout (numbered Must / Should / Nice to
+    fix, Rejected, Not checked); label linked items `e2e:green` or `e2e:red` (red: owning items back
+    to `In Progress`); after the merge, linked green items to `Done`.
+
+Its only Bash commands are `post-commit-status.sh`, `lineage files`, `traps for-files`, `mr-scan`
+and `waivers add` (`service/release/.claude/settings.json`).
 
 It holds the only write-scoped code-host token among the service agents (`CODEHOST_<KEY>_RELEASE_TOKEN`).
 **Precheck:** work if any merge request into `main` changed since the last run.
@@ -201,16 +221,30 @@ write the morning report.
 2. `infra/nightly/checks.py` → `checks.json`: per repo in `infra/nightly/checks.yaml`, a fresh
    checkout and its setup, typecheck, lint and unit tests in a throwaway Docker container with only
    the repo mounted (no secrets, `--ignore-scripts`); osv-scanner, gitleaks and semgrep.
-3. `infra/bin/traps run` → `traps.json` and `infra/bin/lineage check` → `lineage.json`.
+3. `infra/bin/traps run` → `traps.json`, `infra/bin/lineage check` → `lineage.json`,
+   `infra/bin/waivers repeated` → `waivers.json` (checks waived on 3+ MRs in 30 days: the check,
+   not the code, probably needs changing) and `infra/quality/run_signals.py` → `signals.json`
+   (rework in the service agents' runs, below).
 4. The agent: matches work to tasks and moves them forward (an open merge request → `In Progress`,
    merged to `dev` → `In Review`, merged to `main` → `Done` for green items), logs untracked work as
    `Done` tasks, files `Findings` with stable fingerprints (one per problem, "still present" instead
-   of duplicates), and writes the report and one short message per person.
+   of duplicates; each with its `findings-format` certainty label), reports stale baseline
+   entries (`trap-baseline-stale:<id>`) and often-waived checks (`waived-often:<id>`), and writes
+   the report (with an `## Agent runs` section and a **Not checked** line) and one short message
+   per person.
 5. `infra/nightly/publish.py` posts the report; `nightly-send.sh` sends the messages in the morning,
    after quiet hours.
 
 `--dry-run` makes the board read-only (the guard enforces it) and writes what it would do to
 `actions.json`.
+
+**Agent runs.** `run_signals.py` reads the service agents' run logs (`<log root>/<agent>/*.jsonl`)
+and each run's Claude Code transcript, and counts per agent: runs, failed runs, runs that hit the
+turn limit, the same tool error twice in a run (`repeated_error`), a file read 3+ times (`reread`),
+a skill loaded twice (`skill_reread`), guard blocks and permission denials (`blocked`), plus the
+details seen in 2+ runs. Counting is done in the script; the report's `## Agent runs` table and
+one line per repeated detail (which skill step, permission or tool to fix) come from it. It never
+prints tool inputs or outputs beyond a short detail. Tests: `tests/run-signals.test.py`.
 
 ## jenkins-watch
 

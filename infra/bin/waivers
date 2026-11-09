@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Waivers on merge requests (infra/quality/waivers.py): the script decides whether a person's
+# `waive <id>: <reason>` counts.
+#   waivers add --mr <project>!<iid> --id <id> --author <username> --reason "<text>"
+#   waivers list --mr <project>!<iid> | waivers repeated [--days 30] [--min 3]
+exec uv run -q --no-project --with pyyaml==6.0.2 python -I "$(cd "$(dirname "$0")" && pwd)/../quality/waivers.py" "$@"

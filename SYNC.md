@@ -18,11 +18,11 @@ If you run your own fork, you can keep a file like this to track what you change
 
 | Path | Notes |
 |---|---|
-| `plugins/core/**` | Guard, journal hook, session notes and core skills. Skill text is generic here. |
+| `plugins/core/**` | Guard, journal and edit-check hooks, session notes, core skills (incl. `findings-format`), the reviewer. Skill text is generic here. |
 | `plugins/role-*/skills/**` | Role skills. Here role plugins carry skills only (see below). |
 | `service/{triage,analyst,release,nightly,jenkins-watch,agent-mcp}/**` | Prompts, ticks, skills, settings. Here the MCP configs are rendered from `mcp.template.json`. |
-| `infra/bin/{run-agent.sh,alert.sh,repo-sync.sh,nightly.sh,nightly-send.sh,journal,lineage,traps,figma-shot.py}` | Host scripts. |
-| `infra/agent-mcp/**`, `infra/journal/**`, `infra/quality/**`, `infra/nightly/**` | Server, journal, quality and nightly. |
+| `infra/bin/{run-agent.sh,alert.sh,repo-sync.sh,nightly.sh,nightly-send.sh,journal,lineage,traps,mr-scan,waivers,figma-shot.py}` | Host scripts. |
+| `infra/agent-mcp/**`, `infra/journal/**`, `infra/quality/**`, `infra/nightly/**` | Server, journal, quality (claims, traps, waivers, run signals, refcheck, mr-scan) and nightly. |
 | `infra/jenkins-watch/**`, `infra/telegram/**` | The Jenkins watcher and its Telegram poller. Here they read the env file and people.yaml through `infra/adapters`. |
 | `infra/macos/**`, `infra/systemd/**`, `infra/bootstrap.sh` | Host install. Here the launchd prefix is `io.agent-ops` and Linux is at parity (e.g. `telegram-poll.plist.template` ↔ `telegram-poll.service` + `.timer`). |
 | `infra/plane/**`, `infra/n8n/**` | Task-board install/configure, and notifications. |
@@ -41,6 +41,12 @@ If you run your own fork, you can keep a file like this to track what you change
 | `infra/bin/render-mcp.py`, `service/*/mcp.template.json` | Committed `service/*/.mcp.json` | Edit the template, not a rendered file |
 | `plugins/{gitlab,github,postgres,clickhouse,jenkins,figma,metabase}-tools` | MCP servers inside the role plugins | Server changes go to the tool plugin |
 | `knowledge/jenkins-owners.yaml` (example rules for the example team) | The team's job-name → project/owner rules | Port the format, never the rules |
+| `infra/quality/mr_scan.py` (diff through `CodeHostAdapter.merge_request_diffs`) | Reads the MR diff from the GitLab API directly | Port the scan; fetch through the adapter |
+| `knowledge/contract-patterns.yaml` (example for a TypeScript HTTP backend) | Patterns for the team's own backend | Port the format and new kinds, never the team's patterns |
+| `plugins/core/edit-checks.tsv` (example rules on the example traps and `api-contract`) | The team's own edit-time rules | Port the format and `edit-checks.sh`, never the rules |
+| `knowledge/trap-baseline.yaml` (empty) | The team's accepted violations | Port the format, never the entries |
+| `infra/quality/waivers.py` (people's `code_host_usernames`, `service.code_host_bots`) | The team's people.yaml fields | Keep the rules; map the field names |
+| `infra/quality/refcheck.py` (this layout: `tools/`, `docs/*.md`, people.yaml git-ignored) | Its own folders and an onboarding prompt | Port the checks; keep the folder lists of each side |
 | `plugins/core/skills/data-traps/` (example checks) | A warehouse-traps skill with real checks | Port the format and runner changes, never the checks |
 | `infra/lineage/scanners` + `knowledge/lineage-sources.yaml` | Scanners wired to one stack | Port scanner fixes into the matching built-in scanner |
 | `desks/{bi-manager,ci-manager,debugging}` (examples) | The team's own desks | Port only framework changes |

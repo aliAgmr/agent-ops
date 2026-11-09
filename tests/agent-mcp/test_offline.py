@@ -392,6 +392,12 @@ def unit() -> None:
     out = red(f"a {PLANTED} b tracker-token-file-value-99 c abc postgresql://app_ro:{PG_PASS}@db.example.com:5432/app")
     check(PLANTED not in out and "tracker-token-file-value-99" not in out and PG_PASS not in out and " abc " in out,
           "redactor: env values, token files, URL parts; short values kept", out)
+    # Shapes the env file doesn't know (built in pieces so this file holds no token-shaped text).
+    gl, jwt = "glpat-" + "Ab3dE6gH9jK2mN5pQ8sT", "eyJ" + "hbGciOiJIUzI1NiJ9" + ".eyJ" + "zdWIiOiIxMjM0NTYifQ" + ".s1gnatureXYZ123abc"
+    out = red(f"t={gl} j={jwt} curl -H 'X-API-Key: {'Zx9Qw2Er7Ty4Ui' + '1Op6As3Df'}' https://bob:{'hunter2' + 'secret'}@h/x")
+    check(gl not in out and jwt not in out and "Zx9Qw2Er7Ty4Ui1Op6As3Df" not in out and "hunter2secret" not in out
+          and "X-API-Key: [redacted]" in out and "https://bob:[redacted]@h/x" in out,
+          "redactor: token shapes (GitLab, JWT, auth header, URL password)", out)
     body, src = server.split_sources("Answer.\n\n## Sources\n- a.ts:1\n- b.ts:2\n")
     check(body == "Answer." and src == ["a.ts:1", "b.ts:2"], "split_sources")
 

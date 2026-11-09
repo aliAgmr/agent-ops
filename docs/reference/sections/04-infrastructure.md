@@ -129,6 +129,34 @@ Queries: `impact <node>` (what changes if it changes), `upstream <node>` (what i
   `traps for-files <paths>` runs those whose tables the files reach through lineage (release). A
   check that errors is `unreadable`, never a pass. The shipped checks are examples on sample tables;
   write your own from your team's known traps.
+- **Trap baseline** (`knowledge/trap-baseline.yaml`): known violations, `<check id>: {value,
+  measured, note}`. A failing check no further from `expect` than its entry is `baseline` (listed
+  in `baselined`, never blocking); worse is a normal fail; a check that passes again while it still
+  has an entry is listed in `stale_baseline` (remove the entry in the fix's MR). `traps baseline
+  [--ids …]` prints entries for the failing checks for a person to review. Only people edit it
+  (a protected path). `AGENT_TRAP_BASELINE` points elsewhere.
+- **MR scan** (`mr_scan.py`, CLI `infra/bin/mr-scan <repo-path> <iid>`): reads a merge request's
+  diff through the code-host adapter (`merge_request_diffs`, GitLab or GitHub, the release token
+  of the repo's host) and prints JSON: `removed` (routes with the router's prefix from the clone in
+  `/srv/repos`, DTO fields, permission and role checks, auth plugins; an item that an added line
+  brings back, or for some kinds any file, isn't removed) and `added` (SQL text built by
+  interpolation). Patterns: `knowledge/contract-patterns.yaml` (an example for a TypeScript HTTP
+  backend; protected). A diff that can't be read is `error`, never clean.
+- **Waivers** (`waivers.py`, CLI `infra/bin/waivers`): `add --mr <repo>!<iid> --id <id> --author
+  <username> --reason "…"` accepts or refuses a person's waiver (people from `people.yaml`
+  `code_host_usernames`; service accounts from `service` and `AGENT_BOT_USERNAMES` are refused; a
+  specific, non-boilerplate reason not copied from another MR; at most 3 per MR); `list --mr`;
+  `repeated [--days 30] [--min 3]` for nightly. Ledger: `AGENT_WAIVERS_FILE` (default
+  `~/.local/share/agent-ops/waivers.jsonl`).
+- **Run signals** (`run_signals.py --hours 24`): rework in the service agents' runs for the nightly
+  report (section 03, nightly).
+- **Reference check** (`refcheck.py`, run by `tools/lint.sh`): every repo path, script and skill
+  the skills, agent prompts, reference sections and `docs/*.md` name must exist (placeholders,
+  per-machine files and other repos' paths are skipped); protected paths, trap baseline ids and
+  edit-check ids are checked, and the plugin versions in a reference table must match each
+  `plugin.json`. A path counts when git tracks it, or ignores it on purpose (a file setup
+  generates, like `service/<agent>/.mcp.json`), so the result is the same on every machine and in
+  CI. Prints `refcheck: clean` or one line per problem.
 
 ## Notifications: n8n and Telegram (`infra/n8n/`)
 
@@ -168,6 +196,7 @@ exposes the board to a BI tool through a read-only database user.
 | `figma-shot.py` | render a design frame read-only and attach it to an item |
 | `adapter` | the adapters' CLI |
 | `journal`, `lineage`, `traps` | CLIs for the journal, lineage and trap checks |
+| `mr-scan`, `waivers` | the release agent's MR scan and waiver ledger (above) |
 
 `infra/macos/backup.sh` backs up the env files, agent-mcp's data and (if self-hosted) Plane's
 database daily, keeping a week.

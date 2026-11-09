@@ -60,6 +60,16 @@ class GitLabHost(CodeHostAdapter):
         rows = self._list(f"/projects/{_enc(repo)}/merge_requests/{iid}/diffs?per_page=100")
         return [d.get("new_path") or d.get("old_path") for d in rows]
 
+    def merge_request_diffs(self, repo: str, iid: int) -> List[Dict[str, Any]]:
+        out: List[Dict[str, Any]] = []
+        for page in range(1, 21):
+            rows = self._list(f"/projects/{_enc(repo)}/merge_requests/{iid}/diffs?per_page=100&page={page}")
+            out += [{"new_path": d.get("new_path"), "old_path": d.get("old_path"), "diff": d.get("diff") or ""}
+                    for d in rows]
+            if len(rows) < 100:
+                break
+        return out
+
     def commits(self, repo: str, ref: str, since: Optional[str] = None) -> List[Dict[str, Any]]:
         q = {"ref_name": ref, "per_page": 100}
         if since:

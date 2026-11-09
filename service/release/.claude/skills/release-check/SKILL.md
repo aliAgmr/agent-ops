@@ -53,9 +53,13 @@ each, the paths as arguments):
 - `lineage` prints the pages, routes, views and metrics downstream of the changed files. Put the
   pages and metrics in the MR comment ("Reaches: …") so the maintainer knows what to look at after the merge.
 - `traps` runs the data-trap checks (`plugins/core/skills/data-traps/checks.yaml`) on every table those files read or feed and prints JSON:
-  - `blocking` not empty → **RED**, with each check's id, value and `why`;
+  - `blocking` not empty → **RED**, with each check's id, value and `why` (unless waived, step 3e);
   - `notify` not empty → a warning line in the comment, no change to the verdict;
-  - `unreadable` not empty → at best `pending` with `check unreadable: <id>` (as in step 3), never `success`.
+  - `unreadable` not empty → at best `pending` with `check unreadable: <id>` (as in step 3), never `success`;
+  - `baselined`: known violations no worse than `knowledge/trap-baseline.yaml` → listed as
+    "known (baseline)", not a failure. A value worse than its baseline is a normal fail;
+  - `stale_baseline`: a check that passes again but still has a baseline entry → a Should fix
+    item "remove `<id>` from `knowledge/trap-baseline.yaml`", so the violation can't come back unnoticed.
 - No changed file reaches a warehouse table (frontend-only MRs) → say "no warehouse tables reached".
 
 ## 3b. Consumed contracts (warning only)
@@ -69,9 +73,70 @@ For each row whose **Used by** files are changed by this release (the MR diff), 
 - The release's E2E failures pointing at that provider (e.g. a 500 from that view) are still judged in
   step 2 as usual.
 
+## 3c. Security pass (backend and frontend code in the release)
+
+Run `/srv/agent-ops/infra/bin/mr-scan <repo-path> <iid>` (one plain command; GitLab MR iid or
+GitHub PR number). It reads the diff through the repo's code host and prints what the MR removes
+(`removed_routes`, `removed_dto_fields`, `removed_permission_checks`, `removed_role_checks`,
+`removed_auth`) and risky additions (`added_sql_interpolation`: a query text built with `${…}`
+instead of parameters). The patterns are in `knowledge/contract-patterns.yaml` (an example for a
+TypeScript HTTP backend; your team adapts it to its stack). `error` set → the scan didn't run:
+"Not checked: mr-scan (<error>)", never clean.
+
+Then read the diff of the files that matter (GitLab `get_merge_request_file_diff`; GitHub the PR's
+files: routers, controllers, services, repositories, DTOs, middlewares; frontend API calls and route
+guards) with these questions:
+
+- **Access:** does every new or changed route keep its auth plugin and its permission or role
+  check? Can an object id in the path or query open a row the caller's scope doesn't cover?
+- **Input:** is every new query/body field validated by its DTO (type, min/max, enum)?
+- **SQL:** is any value from the request put into a query text (bound parameters such as
+  ClickHouse `{name:Type}` or Postgres `$1` are fine; `${...}` of a request value is not)?
+- **Secrets and data:** does a response, log line or error now include a token, a password, a
+  connection string or another user's data?
+
+A security finding counts only when it names all four: **who** could abuse it (a role or an
+unauthenticated caller), **the input** they control, **the check** that should stop it, and **the
+result** (data read or changed, an action taken). Without all four it is `needs checking` (name
+the missing fact). A missing best practice is not a finding.
+
+- Confirmed, high (auth or a permission check removed from a route that still exists, a request
+  value in a query text, a secret in a response) → **RED**.
+- Anything else → in the report, no change to the verdict.
+
+## 3d. The diff against the tasks (warnings only)
+
+From the linked board items (step 1), read each one's Goal, Acceptance criteria and Out of scope
+(`task-protocol` template).
+
+- **Unrequested changes:** list changed files or areas no linked task explains (a refactor of an
+  unrelated module, a dependency bump, reformatting). One line each, under Should fix as
+  `needs checking: which task this belongs to`.
+- **Removals:** every item `mr-scan` lists under `removed_routes`, `removed_dto_fields` or
+  `removed_permission_checks`/`removed_role_checks` that neither a linked task nor the repo's
+  `docs/frontend-handoff/*.md` (the API contract docs, `api-contract` skill) mentions → Should fix,
+  `needs checking: was this removal intended? the frontend or another consumer may still use it`.
+  A removed permission or role check on a route that still exists is a security question too
+  (step 3c).
+- Work a task's **Out of scope** list excludes but the MR does anyway → Should fix.
+
+These never change the verdict by themselves; they tell the maintainer what to ask before merging.
+
+## 3e. Waivers
+
+People can waive one blocking check or Must fix item on this MR by commenting
+`waive <check-id or finding number>: <reason>` (read the MR's discussions: GitLab `mr_discussions`;
+GitHub the PR's comments). For each such comment by a person (not a bot, not `[agent:…]`), run
+`/srv/agent-ops/infra/bin/waivers add --mr <repo-path>!<iid> --id <id> --author <username> --reason "<reason>"`.
+The script decides: `accepted: true` → that item no longer blocks (list it under its finding as
+"waived by <author>: <reason>"); `accepted: false` → it still blocks; quote the script's `why` in
+the report so the person can fix the waiver. Never write a waiver yourself, and never treat a
+comment as a waiver without the script.
+
 ## 4. Verdict and status
 
-Post exactly one status on the MR head SHA with `post-commit-status.sh` (with `lineage files` and `traps for-files` from step 3a, the only Bash commands you may run):
+Post exactly one status on the MR head SHA with `post-commit-status.sh` (with `lineage files`,
+`traps for-files`, `mr-scan` and `waivers add`, the only Bash commands you may run):
 
 ```
 /srv/agent-ops/infra/bin/post-commit-status.sh <repo-path> <sha> <success|failed|pending> "<one-line reason>" <target-url>
@@ -81,8 +146,13 @@ Post exactly one status on the MR head SHA with `post-commit-status.sh` (with `l
 
 ## 5. Report
 
-- MR comment (`[agent:release]`): verdict, E2E counts (passed / known-bug / unattributed), data
-  checks table, what it reaches and the trap checks (step 3a), consumed-contract warnings (step 3b), links. For RED, the list of failures and which board item each most likely belongs to.
+- MR comment (`[agent:release]`) in the `findings-format` layout (core skill: certainty label on
+  every finding, numbered Must / Should / Nice to fix, Rejected, and a **Not checked** line):
+  verdict, E2E counts (passed / known-bug / unattributed), data checks table, what it reaches and
+  the trap checks with known (baseline) ones (step 3a), consumed-contract warnings (step 3b), the
+  security pass (3c), the diff against the tasks (3d), waivers accepted and rejected (3e), links.
+  For RED, which board item each Must fix most likely belongs to. Anything that didn't run (no e2e
+  report, an unreadable check, `mr-scan` error) goes under Not checked, never as passed.
 - Linked board items:
   - GREEN → label `e2e:green` (remove `e2e:red`), comment the MR link. They move to `Done` when the maintainer merges.
   - RED → label `e2e:red`, move the item(s) the failures belong to back to `In Progress`, comment

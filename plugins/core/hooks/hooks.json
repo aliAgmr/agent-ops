@@ -2,7 +2,7 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash|mcp__.*",
+        "matcher": "Bash|Write|Edit|MultiEdit|NotebookEdit|Artifact.*|mcp__.*",
         "hooks": [
           {
             "type": "command",
@@ -34,6 +34,16 @@
       }
     ],
     "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/scripts/edit-checks.sh",
+            "timeout": 5
+          }
+        ]
+      },
       {
         "matcher": "Bash|Artifact.*|mcp__.*",
         "hooks": [

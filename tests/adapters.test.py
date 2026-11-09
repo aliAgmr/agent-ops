@@ -104,6 +104,8 @@ class Fake(BaseHTTPRequestHandler):
             return self._send(200, {"iid": 4, "state": "closed"})
         if p.startswith("/gl/api/v4/projects/acme%2Fbilling-backend/merge_requests/4/notes/"):
             return self._send(204, None)
+        if p == "/gl/api/v4/projects/acme%2Fbilling-backend/merge_requests/4/diffs":
+            return self._send(200, [{"new_path": "src/a.ts", "old_path": "src/old.ts", "diff": "@@\n-x\n+y\n"}])
         if p == "/gl/api/v4/user":
             return self._send(200, {"username": "agent-bot"})
         # GitHub (Enterprise layout: <url>/api/v3)
@@ -126,7 +128,8 @@ class Fake(BaseHTTPRequestHandler):
         if p == "/gh/api/v3/repos/acme/warehouse/issues/comments/55" and method == "DELETE":
             return self._send(204, None)
         if p == "/gh/api/v3/repos/acme/warehouse/pulls/9/files":
-            return self._send(200, [{"filename": "models/orders.sql"}])
+            return self._send(200, [{"filename": "models/orders.sql", "previous_filename": "models/o.sql",
+                                     "patch": "@@ -1 +1 @@\n-a\n+b"}, {"filename": "logo.png"}])
         return self._send(404, {"message": f"no route {method} {p}"})
 
     def do_GET(self): self.handle_any("GET")
@@ -241,6 +244,8 @@ gl.close_merge_request("acme/billing-backend", 4)
 check(last("merge_requests/4")[3] == {"state_event": "close"}, "gitlab: close MR")
 gl.delete_note("acme/billing-backend", "merge_request", 4, "77")
 check(last("/notes/77")[0] == "DELETE", "gitlab: delete MR note")
+check(gl.merge_request_diffs("acme/billing-backend", 4) == [{"new_path": "src/a.ts", "old_path": "src/old.ts", "diff": "@@\n-x\n+y\n"}],
+      "gitlab: MR diffs per file")
 check(gl.clone_url("acme/billing-backend") == f"{URL}/gl/acme/billing-backend.git", "gitlab: clone URL without a token")
 check(gl.git_auth_header().startswith("Authorization: Basic ") and "gl-rel" not in gl.git_auth_header(), "gitlab: git auth header (base64)")
 
@@ -265,7 +270,10 @@ gh.close_merge_request("acme/warehouse", 9)
 check(last("/pulls/9")[3] == {"state": "closed"}, "github: close PR")
 gh.delete_note("acme/warehouse", "merge_request", 9, "55")
 check(last("/issues/comments/55")[0] == "DELETE", "github: delete PR comment (issue comment)")
-check(gh.merge_request_files("acme/warehouse", 9) == ["models/orders.sql"], "github: PR files")
+check(gh.merge_request_files("acme/warehouse", 9) == ["models/orders.sql", "logo.png"], "github: PR files")
+check(gh.merge_request_diffs("acme/warehouse", 9) == [
+      {"new_path": "models/orders.sql", "old_path": "models/o.sql", "diff": "@@ -1 +1 @@\n-a\n+b"},
+      {"new_path": "logo.png", "old_path": "logo.png", "diff": ""}], "github: PR diffs (patch, previous_filename; none for a binary)")
 check(A.codehost(CFG, "oss", token="t", env={}).git_auth_header() == "Authorization: Basic eC1hY2Nlc3MtdG9rZW46dA==",
       "github: git auth header uses x-access-token")
 

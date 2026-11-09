@@ -13,6 +13,10 @@ input into that shape and the guard's verdict into the client's answer:
   shell tool is `Bash`, MCP tools are mcp__<server>__<tool>. Blocks with exit 2 and the reason on
   stderr, like Codex. Kimi hooks fail open: if this process crashes or times out, Kimi lets the
   call through; the static deny rules setup writes into ~/.kimi-code/config.toml are the backstop.
+- Codex apply_patch becomes an Edit of the files it touches with only the lines it adds (guard
+  rules 10 and 11). Kimi's own file tools and Cursor file edits (no hook before them) aren't checked.
+- Rule 11 (protected files) answers "ask": Cursor shows a permission prompt; Codex and Kimi can't
+  ask, so they block and tell the person to make the change themselves.
 
 If the guard can't run (no bash, broken install), the call is blocked: a missing guard must never
 mean "anything goes".
@@ -50,25 +54,70 @@ def normalize(client: str, data: dict):
         return {"tool_name": "Bash", "tool_input": {"command": str(cmd)}}
     if tool.startswith("mcp__"):
         return {"tool_name": tool, "tool_input": ti}
-    return None  # apply_patch, update_plan, …: not covered by guard.sh
+    if tool == "apply_patch":
+        return patch_event(ti)
+    return None  # update_plan, …: not covered by guard.sh
 
 
-def verdict(event: dict, role: str):
-    """→ (allowed, reason). Runs guard.sh with the person's role."""
+def patch_event(ti) -> dict | None:
+    """Codex apply_patch → an Edit for guard.sh: the files it touches (rule 11, protected files) and
+    only the lines it adds (rule 10, secrets; removing a secret stays possible)."""
+    values = ti.values() if isinstance(ti, dict) else [ti]
+    patch = next((v for v in values if isinstance(v, str) and "*** Begin Patch" in v), None)
+    if patch is None:
+        return None
+    files, added = [], []
+    for line in patch.splitlines():
+        for head in ("*** Add File: ", "*** Update File: ", "*** Delete File: ", "*** Move to: "):
+            if line.startswith(head):
+                files.append(line[len(head):].strip())
+        if line.startswith("+"):
+            added.append(line[1:])
+    return {"tool_name": "Edit", "tool_input": {"edits": [{"file_path": f} for f in files],
+                                                 "new_string": "\n".join(added)}}
+
+
+def secret_env(cfg: dict, role: str) -> dict:
+    """The person's sensitive plugin options as CLAUDE_PLUGIN_OPTION_<KEY>, as Claude Code passes
+    them to hooks, so guard.sh rule 10 knows their exact values. Never printed or logged."""
+    env = {}
+    try:
+        for p in C.plugins_for(role, C.repo_root()):
+            for key, spec in p.options.items():
+                if spec.get("sensitive"):
+                    v = C.option_value(cfg, p, key)
+                    if v:
+                        env[f"CLAUDE_PLUGIN_OPTION_{key.upper()}"] = str(v)
+    except (Exception, SystemExit):  # noqa: BLE001 - shapes still apply without the values
+        pass
+    return env
+
+
+def verdict(event: dict, role: str, extra_env: dict | None = None):
+    """→ (decision, reason): decision "allow", "deny" or "ask" (guard.sh rule 11: a person decides).
+    Runs guard.sh with the person's role."""
+    import os
     bash = C.find_bash()
     guard = C.repo_root() / "plugins" / "core" / "scripts" / "guard.sh"
     if not bash or not guard.exists():
-        return False, "agent-ops guard is not installed correctly (bash or guard.sh missing); run `agent-ops check`"
+        return "deny", "agent-ops guard is not installed correctly (bash or guard.sh missing); run `agent-ops check`"
     try:
         r = subprocess.run([bash, str(guard), "--role", role or ""], input=json.dumps(event),
+                           env={**os.environ, **(extra_env or {})},
                            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=20)
     except (OSError, subprocess.TimeoutExpired) as e:
-        return False, f"agent-ops guard failed to run ({e.__class__.__name__}); blocked to be safe"
+        return "deny", f"agent-ops guard failed to run ({e.__class__.__name__}); blocked to be safe"
     if r.returncode == 2:
-        return False, r.stderr.strip() or "BLOCKED by agent-ops guard"
+        return "deny", r.stderr.strip() or "BLOCKED by agent-ops guard"
     if r.returncode != 0:
-        return False, f"agent-ops guard error (exit {r.returncode}); blocked to be safe"
-    return True, ""
+        return "deny", f"agent-ops guard error (exit {r.returncode}); blocked to be safe"
+    try:
+        out = json.loads(r.stdout or "{}").get("hookSpecificOutput", {})
+    except ValueError:
+        out = {}
+    if out.get("permissionDecision") == "ask":
+        return "ask", out.get("permissionDecisionReason") or "agent-ops guard: this needs your OK"
+    return "allow", ""
 
 
 def run(client: str) -> int:
@@ -76,16 +125,19 @@ def run(client: str) -> int:
         data = json.loads(sys.stdin.read() or "{}")
     except ValueError:
         data = {}
-    role = C.load_config().get("role", "")
+    cfg = C.load_config()
+    role = cfg.get("role", "")
     event = normalize(client, data)
-    ok, reason = (True, "") if event is None else verdict(event, role)
+    decision, reason = ("allow", "") if event is None else verdict(event, role, secret_env(cfg, role))
     if client == "cursor":
-        out = {"continue": True, "permission": "allow"} if ok else {
-            "continue": True, "permission": "deny", "user_message": reason, "agent_message": reason}
+        out = {"continue": True, "permission": "allow"} if decision == "allow" else {
+            "continue": True, "permission": decision, "user_message": reason, "agent_message": reason}
         print(json.dumps(out))
         return 0
-    if ok:
+    if decision == "allow":
         return 0
+    if decision == "ask":   # Codex/Kimi hooks can't ask the person: the person makes this edit themselves
+        reason = f"BLOCKED by agent-ops guard: {reason}. This client can't ask for your OK, so make this change yourself."
     print(reason, file=sys.stderr)
     return 2
 

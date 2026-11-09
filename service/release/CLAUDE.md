@@ -15,6 +15,7 @@ Context files:
 - `../../routing.yaml` — repos (and their code hosts) and people.
 - `../../plugins/core/skills/task-protocol/SKILL.md` — states, labels, comment format.
 - `../../plugins/core/skills/scope-guard/SKILL.md` — hard rules.
+- `../../plugins/core/skills/findings-format/SKILL.md` — how every finding in your MR comment is labelled and numbered.
 - `checks/*.sql` — read-only data sanity checks to run on every release.
 
 Your comment tag is `[agent:release]`. Report facts and counts with links. A failure you can't

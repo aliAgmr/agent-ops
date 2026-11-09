@@ -80,10 +80,27 @@ infra/bin/lineage build                              # refresh the cache now
 infra/bin/lineage check                              # hand-file names that no longer exist
 infra/bin/traps run                                  # every data-trap check (read-only)
 infra/bin/traps for-files <changed paths>            # the checks a change reaches
+infra/bin/traps baseline                             # baseline entries for today's failing checks
 ```
 
-A new check's `expect` is today's healthy value; use a baseline only when the current value isn't
-zero yet, and say so in the check.
+A new check's `expect` is the healthy value. When a check fails today on old data you can't fix
+first, run `traps baseline`, review the entries and add the ones you accept to
+`knowledge/trap-baseline.yaml` with a note: release then goes red only on new or worse
+violations. Remove an entry in the MR that fixes it (release and nightly list stale ones).
+
+## Release review helpers
+
+```bash
+infra/bin/mr-scan acme/billing-backend 42            # what MR !42 removes, and risky additions
+infra/bin/waivers list --mr acme/billing-backend!42  # the waivers accepted on it
+infra/bin/waivers repeated                           # checks waived on 3+ MRs in 30 days
+python3 infra/quality/run_signals.py --hours 24      # rework in the service agents' runs
+python3 infra/quality/refcheck.py                    # prompts name only files and skills that exist
+```
+
+A waiver is refused when it comes from a service account or someone not in `people.yaml`, has a
+vague or copied reason, or the MR already has 3. Adapt `knowledge/contract-patterns.yaml` and
+`plugins/core/edit-checks.tsv` to your stack (both are protected: guard rule 11 asks first).
 
 ## Jenkins watcher
 
@@ -113,6 +130,11 @@ for t in tests/*.test.py; do python3 "$t" || echo "FAILED: $t"; done
 uv run --project clients python tests/clients.test.py
 python3 tools/leak-check.py
 ```
+
+Or all at once, as CI does: `bash tools/run-tests.sh` (and `bash tools/lint.sh` for JSON, shell,
+skill front matter, the leak check and `refcheck.py`). The suites include
+`tests/edit-checks.test.sh` (the edit-time rules), `tests/review.test.py` (mr-scan and waivers)
+and `tests/run-signals.test.py`; the trap baseline is in `tests/lineage.test.py`.
 
 Each prints `ok` or `FAIL` per check and exits non-zero on any failure.
 

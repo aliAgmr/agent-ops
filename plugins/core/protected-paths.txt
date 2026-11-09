@@ -1,0 +1,39 @@
+# Files that decide whether a check passes. guard.sh rule 11: an agent's edit to one of these needs
+# a person (people's agents get a permission prompt, service agents are blocked), because loosening
+# a check is the easy way to turn it green. One glob per line, matched against the end of the path,
+# case-insensitive (`*` also matches `/`). Keep it short: every entry costs a prompt.
+
+# CI and git hooks
+.gitlab-ci.yml
+.github/workflows/*
+Jenkinsfile
+.husky/*
+lefthook.yml
+.pre-commit-config.yaml
+
+# Lint, type and format config
+.eslintrc*
+eslint.config.*
+biome.json
+biome.jsonc
+.prettierrc*
+prettier.config.*
+tsconfig*.json
+
+# Test runner config and the E2E known-bugs list (a failure listed there stops counting as red)
+jest.config.*
+vitest.config.*
+playwright.config.*
+tests/e2e/bugs.md
+
+# agent-ops' own checks, hooks and settings
+plugins/core/skills/data-traps/checks.yaml
+knowledge/trap-baseline.yaml
+knowledge/contract-patterns.yaml
+service/release/checks/*
+plugins/core/scripts/guard.sh
+plugins/core/protected-paths.txt
+plugins/core/edit-checks.tsv
+plugins/*/hooks/hooks.json
+.claude/settings.json
+.claude/settings.local.json

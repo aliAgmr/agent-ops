@@ -30,7 +30,9 @@ Ask: **would a mistake here make other checks pass falsely, or go wrong silently
 ## Order of checks
 1. **Correctness:** does it do what the task's acceptance criteria say, including empty or no-data
    cases, nulls, time zones and calendar edge cases, and the role boundaries?
-2. **Security:** permissions on new routes, input validation, secrets, SQL built from input.
+2. **Security:** permissions on new routes, input validation, secrets, SQL built from input. A
+   security finding names who could abuse it, the input, the check that should stop it and the
+   concrete result; without all four it's `needs checking`, not a defect.
 3. **Invariants:** API contracts (`api-contract`: fields, required/optional, enums) and DB
    constraints. A frontend-visible change without its handoff doc is a defect.
 4. **Tests:** is there a test that would fail without this change? Bug fixes need a regression test.
@@ -40,18 +42,30 @@ The diff is a keyhole. Trace error paths, and `git grep` the callers of every ch
 route or field: a rename or a changed return shape breaks code that isn't in the diff.
 
 ## Report
+
+In the `findings-format` layout (core skill): certainty label on every finding, numbered through
+Must / Should / Nice to fix, a Rejected list, and "Not checked".
+
 ```
 Verdict: ACCEPT | CHANGES NEEDED
 Depth: deep | standard (why)
-Defects (must fix):
-- path/file.ts:123: <what fails, with a concrete input or scenario> → <suggested fix>
-Nits (optional):
-- ...
+
+Must fix
+1. [confirmed, high] path/file.ts:123: <what fails, with a concrete input or scenario> → <fix>. If skipped: <what happens>.
+Should fix
+2. [needs checking: <the missing fact>] path/file.ts:40: <what may fail> → <how to settle it>.
+Nice to fix
+3. [confirmed, low] …
+Rejected
+- <claim you looked at and dismissed> — <why>
+
 Checked: <what you actually read or ran, e.g. "diff (14 files), 6 callers of getInvoices, ran invoices.e2e">
+Not checked: <what you couldn't read or run, and why; "nothing" only when true>
 ```
 
-Rules for a defect: it must have a `file:line` **and** a concrete failure (an input, a state or a
-caller that breaks). Without both, it's a nit or a question, not a defect. LLM reviewers tend to
+`CHANGES NEEDED` when anything is under Must fix. Rules for a confirmed defect: it must have a
+`file:line` **and** a concrete failure (an input, a state or a caller that breaks). Without both,
+it's `needs checking` (name the missing fact) or a nit, not a defect. LLM reviewers tend to
 over-reject, so don't invent problems to look thorough. Equally, don't wave something through
 because it "looks fine": say what you checked. If you couldn't check something (no test data, no
 access), write it under `Checked` as **not verified**, never as passed.
