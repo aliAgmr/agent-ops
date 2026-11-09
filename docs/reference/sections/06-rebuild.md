@@ -84,6 +84,9 @@ Change (SETUP.md does most of this):
 - `data-traps` and `clickhouse-query-style`: they're examples; write your own traps and style.
 - Release checks (`service/release/checks/*.sql`), nightly checks (`infra/nightly/checks.yaml`),
   lineage scanners (`knowledge/lineage.yaml`).
+- The examples the release agent's MR scan and the edit-time hook use
+  (`knowledge/contract-patterns.yaml`, `plugins/core/edit-checks.tsv`): match them to your stack
+  and your team's common mistakes. `knowledge/trap-baseline.yaml` starts empty.
 
 Keep:
 - The board as the one channel, the state machine, the comment tag format.

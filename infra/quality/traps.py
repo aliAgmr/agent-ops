@@ -8,9 +8,19 @@ number, with `expect` ("== 0", "< 0.005" …), `severity`, `action` (block | not
   traps run [--ids a,b] [--tables t1,t2]   run all, or those by id / reading these tables
   traps for-files <path> [<path>…]         the checks an MR's changed files reach through lineage
                                            (tables those files read or feed), then run them
-Prints JSON: {"results": [{id, value, expect, status: pass|fail|unreadable, action, severity, ms,
-why, error}], "blocking": [ids failing with action block], "notify": [...], "unreadable": [...]}.
+  traps baseline [--ids a,b]               run them and print baseline entries for the failing ones
+                                           (a person reviews them and adds them to the baseline file)
+Prints JSON: {"results": [{id, value, expect, status: pass|fail|baseline|unreadable, action,
+severity, ms, why, error, baseline}], "blocking": [ids failing with action block], "notify": [...],
+"unreadable": [...], "baselined": [...], "stale_baseline": [...]}.
 Exit 0 always (the caller decides); a check that can't run is never a pass.
+
+Baseline (knowledge/trap-baseline.yaml): known violations measured on a date. A failing check whose
+value is no further from `expect` than its baseline value is `baseline` (known, not blocking), so
+the checks can be strict without a cleanup first; worse than the baseline is a normal `fail`. A
+check that passes again while it still has a baseline entry is listed in `stale_baseline`: remove
+the entry, so a fixed violation can't come back unnoticed. Only people edit the baseline (guard
+rule 11 asks first).
 """
 from __future__ import annotations
 
@@ -42,6 +52,7 @@ def default_checks() -> Path:
 
 
 CHECKS = default_checks()
+BASELINE = Path(os.environ.get("AGENT_TRAP_BASELINE", str(ROOT / "knowledge" / "trap-baseline.yaml")))
 EXPECT = re.compile(r"^\s*(==|!=|<=|>=|<|>)\s*(-?\d+(?:\.\d+)?)\s*$")
 
 
@@ -60,6 +71,27 @@ def meets(value: float, expect: str) -> bool:
     op, n = EXPECT.match(expect).groups()
     n = float(n)
     return {"==": value == n, "!=": value != n, "<=": value <= n, ">=": value >= n, "<": value < n, ">": value > n}[op]
+
+
+def load_baseline(path: Path = BASELINE) -> Dict[str, float]:
+    """{check id: baseline value}; a missing file is an empty baseline."""
+    if not path.is_file():
+        return {}
+    data = yaml.safe_load(path.read_text()) or {}
+    out = {}
+    for cid, entry in (data.get("baseline") or {}).items():
+        v = entry.get("value") if isinstance(entry, dict) else entry
+        if v is not None:
+            out[str(cid)] = float(v)
+    return out
+
+
+def distance(value: float, expect: str) -> float:
+    """How far a value is from meeting `expect` (0 when it meets it)."""
+    if meets(value, expect):
+        return 0.0
+    op, n = EXPECT.match(expect).groups()
+    return abs(value - float(n)) if op != "!=" else 1.0
 
 
 def env_values() -> Dict[str, str]:
@@ -91,8 +123,10 @@ def query(sql: str, env: Dict[str, str], timeout: int = 120) -> str:
         raise RuntimeError(e.read().decode("utf-8", "replace").strip().splitlines()[0][:300]) from None
 
 
-def run(checks: List[Dict[str, Any]], env: Optional[Dict[str, str]] = None, runner=None) -> Dict[str, Any]:
+def run(checks: List[Dict[str, Any]], env: Optional[Dict[str, str]] = None, runner=None,
+        baseline: Optional[Dict[str, float]] = None) -> Dict[str, Any]:
     env = env if env is not None else env_values()
+    baseline = load_baseline() if baseline is None else baseline
     runner = runner or (lambda sql: query(sql, env))
     results = []
     for c in checks:
@@ -105,6 +139,10 @@ def run(checks: List[Dict[str, Any]], env: Optional[Dict[str, str]] = None, runn
             if value is None:
                 raise RuntimeError("no value returned")
             r.update(value=value, status="pass" if meets(value, c["expect"]) else "fail")
+            if c["id"] in baseline:
+                r["baseline"] = baseline[c["id"]]
+                if r["status"] == "fail" and distance(value, c["expect"]) <= distance(baseline[c["id"]], c["expect"]):
+                    r["status"] = "baseline"
         except Exception as e:  # noqa: BLE001 - every failure to run is "unreadable", never "pass"
             r.update(value=None, status="unreadable", error=str(e)[:300])
         r["ms"] = int((time.time() - t0) * 1000)
@@ -112,7 +150,9 @@ def run(checks: List[Dict[str, Any]], env: Optional[Dict[str, str]] = None, runn
     return {"results": results,
             "blocking": [r["id"] for r in results if r["status"] == "fail" and r["action"] == "block"],
             "notify": [r["id"] for r in results if r["status"] == "fail" and r["action"] != "block"],
-            "unreadable": [r["id"] for r in results if r["status"] == "unreadable"]}
+            "unreadable": [r["id"] for r in results if r["status"] == "unreadable"],
+            "baselined": [r["id"] for r in results if r["status"] == "baseline"],
+            "stale_baseline": [r["id"] for r in results if r["status"] == "pass" and "baseline" in r]}
 
 
 def tables_for_files(paths: List[str]) -> List[str]:
@@ -131,10 +171,19 @@ def main(argv: Optional[List[str]] = None) -> int:
     sub.add_parser("list")
     r = sub.add_parser("run"); r.add_argument("--ids"); r.add_argument("--tables")
     f = sub.add_parser("for-files"); f.add_argument("paths", nargs="+")
+    b = sub.add_parser("baseline"); b.add_argument("--ids")
     a = ap.parse_args(argv)
     checks = load_checks()
     if a.cmd == "list":
         print(json.dumps([{k: c.get(k) for k in ("id", "trap", "tables", "expect", "severity", "action")} for c in checks], indent=2))
+        return 0
+    if a.cmd == "baseline":
+        ids = set((a.ids or "").split(",")) - {""}
+        out = run([c for c in checks if not ids or c["id"] in ids], baseline={})
+        today = time.strftime("%Y-%m-%d")
+        lines = ["baseline:"] + [f"  {r['id']}: {{value: {r['value']:g}, measured: {today}}}   # expect {r['expect']}"
+                                  for r in out["results"] if r["status"] == "fail"]
+        print("\n".join(lines) if len(lines) > 1 else "# every check passes: nothing to baseline")
         return 0
     if a.cmd == "for-files":
         tables = set(tables_for_files(a.paths))

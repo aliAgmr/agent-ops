@@ -27,6 +27,12 @@ not with steps 1–7.
 - Is it a duplicate of an open item (search its own board; mention a likely match on another board
   in the notes, but don't link across projects)? → comment `[agent:triage] duplicate of <id>`, link
   it, add label `question`, assign to the question owner, leave in `Inbox`. Don't cancel it yourself.
+- Was the same request declined before? Search the board's `Cancelled` items with label
+  `out-of-scope` (last 12 months) for the item's key nouns (page, route, metric, table). If one
+  clearly asks for the same thing, comment `[agent:triage] A similar request was declined as out
+  of scope: <id> (<date>): "<its [decision] reason>". Is something different now?`, add label
+  `question`, assign to the approver who declined it, leave it in `Inbox`. Don't cancel it
+  yourself. A partial match: route it normally and name the declined item in the notes.
 - Is it too vague to route (no goal, or no way to know when it's done)? → ask (step 6).
 
 ## 1b. Deep analysis first (labels `analysis:needed`, `analysis:done`)

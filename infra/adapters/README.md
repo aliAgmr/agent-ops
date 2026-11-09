@@ -42,6 +42,7 @@ Items are plain dicts with at least: `id`, `key` (e.g. `BIL-12`), `project_id`, 
 | `whoami()` | `{username}` | setup checks |
 | `list_merge_requests(repo, *, state="opened", target_branch=None, updated_after=None)` | `[{iid, title, source_branch, target_branch, sha, web_url, author, updated_at, merged_at}]` | precheck (release), nightly |
 | `get_merge_request(repo, iid)` / `merge_request_files(repo, iid)` | MR dict / `[path]` | release, journal snapshots |
+| `merge_request_diffs(repo, iid)` | `[{new_path, old_path, diff}]` per changed file (GitLab `/merge_requests/{iid}/diffs`; GitHub `/pulls/{n}/files`: `filename`, `previous_filename`, `patch`); `diff` is `""` for a binary or too-large file | release (`mr-scan`) |
 | `commits(repo, ref, since)` | `[{sha, title, message, author_name, created_at}]` | nightly |
 | `statuses(repo, sha, name=None)` / `post_status(repo, sha, state, name, description, target_url=None)` | | release status (`state`: `pending|success|failed|canceled`; GitHub maps failed→failure, canceled→error) |
 | `update_merge_request(repo, iid, fields)` / `close_merge_request(repo, iid)` / `delete_note(repo, kind, iid, note_id)` | | journal revert |

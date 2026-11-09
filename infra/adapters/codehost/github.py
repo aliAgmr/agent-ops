@@ -70,6 +70,16 @@ class GitHubHost(CodeHostAdapter):
     def merge_request_files(self, repo: str, iid: int) -> List[str]:
         return [f.get("filename") for f in (self._list(f"/repos/{repo}/pulls/{iid}/files?per_page=100"))]
 
+    def merge_request_diffs(self, repo: str, iid: int) -> List[Dict[str, Any]]:
+        out: List[Dict[str, Any]] = []
+        for page in range(1, 31):          # GitHub lists at most 3000 files
+            rows = self._list(f"/repos/{repo}/pulls/{iid}/files?per_page=100&page={page}")
+            out += [{"new_path": f.get("filename"), "old_path": f.get("previous_filename") or f.get("filename"),
+                     "diff": f.get("patch") or ""} for f in rows]
+            if len(rows) < 100:
+                break
+        return out
+
     def commits(self, repo: str, ref: str, since: Optional[str] = None) -> List[Dict[str, Any]]:
         q = {"sha": ref, "per_page": 100}
         if since:

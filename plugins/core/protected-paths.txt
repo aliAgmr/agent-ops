@@ -28,9 +28,12 @@ tests/e2e/bugs.md
 
 # agent-ops' own checks, hooks and settings
 plugins/core/skills/data-traps/checks.yaml
+knowledge/trap-baseline.yaml
+knowledge/contract-patterns.yaml
 service/release/checks/*
 plugins/core/scripts/guard.sh
 plugins/core/protected-paths.txt
+plugins/core/edit-checks.tsv
 plugins/*/hooks/hooks.json
 .claude/settings.json
 .claude/settings.local.json

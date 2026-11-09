@@ -1,0 +1,10 @@
+# Known data-trap violations (infra/quality/traps.py). A failing check whose value is no worse
+# than its entry here is reported as `baseline` (known), not as a failure, so release only goes red
+# on new or worse violations. When a check passes again, release and nightly list its entry as
+# stale: remove it in the same MR as the fix, so the violation can't come back unnoticed.
+#
+# Fill it with `infra/bin/traps baseline` (prints entries for every failing check), review them,
+# and add the ones you accept here with a note. Only people edit this file (guard rule 11 asks).
+#
+#   <check id>: {value: <number>, measured: <date>, note: <why it is accepted for now>}
+baseline: {}

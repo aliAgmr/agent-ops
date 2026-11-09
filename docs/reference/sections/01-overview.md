@@ -254,7 +254,10 @@ forbidden changes back.
 
 1. **Created in `Inbox`** by a person, their agent (`write-task`, `handoff`, `figma-to-tasks`,
    `design-handoff`, `api-contract`) or a job. Every creator checks for duplicates first. The
-   description template is Goal, Context/links, Acceptance criteria, Triage notes (empty).
+   description template is Goal, Context/links, Current / desired behaviour (bugs and changes),
+   Acceptance criteria, Out of scope (required for features and changes), Triage notes (empty).
+   A request an approver declines goes to `Cancelled` with the label `out-of-scope` and one
+   `[decision] out of scope: <why>` comment, so triage can point a repeat request at the decision.
 2. **Triage** (at most 5 Inbox items per tick, across all boards) assesses effort (`effort:xs` …
    `effort:xl`). A bug or feature of effort `s` or more gets `analysis:needed` and stays in `Inbox`.
 3. **Analysis.** The analyst takes one `analysis:needed` item per run, writes `## Analysis` and

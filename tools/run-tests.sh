@@ -7,6 +7,7 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 suites=(
   "guard|bash tests/guard.test.sh"
+  "edit-checks|bash tests/edit-checks.test.sh"
   "precheck|bash tests/precheck.test.sh"
   "run-agent|bash tests/run-agent.test.sh"
   "repo-sync|bash tests/repo-sync.test.sh"
@@ -19,6 +20,8 @@ suites=(
   "quality|python3 tests/quality.test.py"
   "jenkins-watch|python3 tests/jenkins-watch.test.py"
   "lineage|uv run -q --no-project --with pyyaml python tests/lineage.test.py"
+  "review|uv run -q --no-project --with pyyaml python tests/review.test.py"
+  "run-signals|python3 tests/run-signals.test.py"
   "nightly|uv run -q --no-project --with pyyaml --with requests --with markdown python tests/nightly.test.py"
   "n8n|bash tests/n8n-dm.test.sh"
   "clients|uv run -q --project clients python tests/clients.test.py"

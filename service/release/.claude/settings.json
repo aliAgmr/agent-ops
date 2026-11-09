@@ -27,6 +27,8 @@
       "mcp__clickhouse__run_query",
       "Bash(/srv/agent-ops/infra/bin/lineage files *)",
       "Bash(/srv/agent-ops/infra/bin/traps for-files *)",
+      "Bash(/srv/agent-ops/infra/bin/mr-scan *)",
+      "Bash(/srv/agent-ops/infra/bin/waivers add *)",
       "mcp__github__add_issue_comment"
     ],
     "deny": [

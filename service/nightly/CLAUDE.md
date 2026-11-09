@@ -22,6 +22,7 @@ Context files (read them at the start of every run):
 - `../../people.yaml` — each person's email (their board login and usually their git email).
 - `../../plugins/core/skills/task-protocol/SKILL.md` — states, labels, template, comment format.
 - `../../plugins/core/skills/scope-guard/SKILL.md` — hard rules.
+- `../../plugins/core/skills/findings-format/SKILL.md` — certainty labels for findings and the Not checked line.
 - `../../plugins/core/skills/data-traps/SKILL.md` — before any warehouse query.
 
 Read-only clones of the repos are in `/srv/repos/<repo-name>`. Search them with one plain command

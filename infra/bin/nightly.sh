@@ -6,6 +6,8 @@
 #   2. checks.py  → checks.json  (tests in Docker, osv-scanner, gitleaks, semgrep, nightly E2E)
 #   2b. traps     → traps.json   (warehouse-trap checks, read-only ClickHouse) and
 #       lineage check → lineage.json (rebuilds the lineage cache; hand-file names that no longer exist)
+#       waivers repeated → waivers.json (checks waived on 3+ MRs in 30 days)
+#       run_signals.py → signals.json (rework in the service agents' runs since the last pass)
 #   3. run-agent.sh nightly      (Claude: updates the board, writes report.md, group-*.en.txt, dm.en.txt)
 #   4. publish.py → page.json    (the report page on the board)
 # The messages go out later in the morning (nightly-send.sh), after quiet hours.
@@ -63,6 +65,10 @@ bash "$ROOT/infra/bin/traps" run > "$RUN_DIR/traps.json" 2>> "$LOG_DIR/error.log
   || echo '{"error": "traps run failed; see the nightly error.log"}' > "$RUN_DIR/traps.json"
 bash "$ROOT/infra/bin/lineage" check > "$RUN_DIR/lineage.json" 2>> "$LOG_DIR/error.log" \
   || [ -s "$RUN_DIR/lineage.json" ] || echo '{"error": "lineage check failed; see the nightly error.log"}' > "$RUN_DIR/lineage.json"
+bash "$ROOT/infra/bin/waivers" repeated > "$RUN_DIR/waivers.json" 2>> "$LOG_DIR/error.log" \
+  || echo '{"error": "waivers repeated failed; see the nightly error.log"}' > "$RUN_DIR/waivers.json"
+python3 -I "$ROOT/infra/quality/run_signals.py" --hours 24 > "$RUN_DIR/signals.json" 2>> "$LOG_DIR/error.log" \
+  || echo '{"error": "run_signals failed; see the nightly error.log"}' > "$RUN_DIR/signals.json"
 [ -n "$no_agent" ] && { echo "$(ts) --no-agent: stopping before the agent" >> "$LOG_DIR/passes.log"; exit 0; }
 
 extra="RUN_DIR=$RUN_DIR

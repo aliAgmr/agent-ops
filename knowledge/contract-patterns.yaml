@@ -1,0 +1,45 @@
+# What infra/quality/mr_scan.py looks for in a merge request's diff (release agent, steps 3c/3d).
+# Each kind: `files` (globs on the changed path; `**` any depth) and `pattern` (a Python regex run
+# over the removed or added lines of a file joined with newlines, so a call split over two lines
+# still matches; the first group is the item's name, `name` joins several: {1}, {2:upper}, {prefix}).
+#   removed_*  an item on removed lines that no added line brings back (a rename counts as removed)
+#   added_*    an item on added lines (risky constructs)
+# `ignore` (optional): a regex on the item's name; matching items are dropped.
+# This is an EXAMPLE for a TypeScript HTTP backend: routers in src/routers/*.ts with a `prefix`
+# (Elysia-style `.get("/path", …)`), request DTOs in src/dtos as TypeBox fields (`name: t.String()`),
+# `hasPermission(user, "resource:action")` / `hasRole(…)` checks and an auth plugin `.use(xAuth)`.
+# Adapt the globs and patterns to your own backend's stack, keeping the kinds (the release-check
+# skill reads them by name). Only people edit it (guard rule 11 asks).
+
+removed_routes:
+  files: ["src/routers/*.ts"]
+  pattern: '\.(get|post|put|patch|delete)\(\s*["''`](/[^"''`]*)?["''`]'
+  name: "{1:upper} {prefix}{2}"      # METHOD + the router's prefix + path
+  prefix: 'prefix:\s*["'']([^"'']+)["'']'
+  across_files: true                 # a route moved to another router file is not removed
+
+removed_dto_fields:
+  files: ["src/dtos/*.ts", "src/dtos/**/*.ts"]
+  pattern: '(?m)^\s*([a-z_][a-z0-9_]*)\s*:\s*t\.'
+
+removed_permission_checks:
+  files: ["src/**/*.ts"]
+  pattern: 'hasPermission\([^)]*?["'']([A-Za-z_*]+:[A-Za-z_*]+)["'']'
+  across_files: true
+
+removed_role_checks:
+  files: ["src/**/*.ts"]
+  pattern: '(?:hasRole|requireRole|role_code|roleCode)\W+["'']([A-Za-z_-]+)["'']'
+  across_files: true
+
+removed_auth:
+  files: ["src/routers/*.ts"]
+  pattern: '\.use\(\s*(\w*[Aa]uth\w*)\s*\)'
+
+added_sql_interpolation:
+  files: ["src/**/*.ts"]
+  # a query text (select/where/insert … in a template literal) with ${…} in it: SQL built from
+  # values instead of query parameters ({name:Type} for ClickHouse, $1 for Postgres)
+  pattern: '(?is)`[^`]*\b(select|insert|update|delete|where|join|order\s+by|group\s+by)\b[^`]*\$\{\s*([^}]{1,80})\}'
+  name: "{1} … interpolates {2}"
+  ignore: 'interpolates [A-Z][A-Z0-9_]*$'   # constants (view names like ${INVOICES_VIEW}) are not input

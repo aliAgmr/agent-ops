@@ -32,6 +32,11 @@ class CodeHostAdapter:
     def merge_request_files(self, repo: str, iid: int) -> List[str]:
         raise NotImplementedError
 
+    def merge_request_diffs(self, repo: str, iid: int) -> List[Dict[str, Any]]:
+        """[{new_path, old_path, diff}] per changed file; `diff` is the unified diff's hunks
+        ("" for a binary or too-large file)."""
+        raise NotImplementedError
+
     def commits(self, repo: str, ref: str, since: Optional[str] = None) -> List[Dict[str, Any]]:
         raise NotImplementedError
 

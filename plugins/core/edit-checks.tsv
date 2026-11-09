@@ -1,0 +1,15 @@
+# Advisory checks on a file right after an agent writes or edits it (plugins/core/scripts/edit-checks.sh,
+# a PostToolUse hook on Write/Edit/MultiEdit). A hit is shown to the agent as context, never blocks.
+# Tab-separated, one check per line; `-` for an empty field. Patterns are ERE, case-insensitive,
+# run over the whole file. A check fires when the file's path matches one of `paths`, `must`
+# matches, `also` (if set) matches, and `unless` (if set) doesn't.
+# These are EXAMPLES that match the example traps in the data-traps skill and the api-contract
+# skill: replace them with the mistakes your own team keeps making (one line each, with the fix).
+#
+# id	paths (comma-separated globs)	must	also	unless	message
+trap-ledger-any	*.sql,*/repositories/*.ts,*/repositories/*/*.ts,*/warehouse/*	payments_ledger	(^|[^a-z_])(any|argmax)\(	-	data-traps 1: analytics.payments_ledger has one row per (invoice, instalment); the amount owed is sum(instalment_amount) over all rows, never any() or argMax().
+trap-line-total-sum	*.sql,*/repositories/*.ts,*/repositories/*/*.ts,*/warehouse/*	sum\([[:space:]]*line_total[[:space:]]*\)	-	-	data-traps 2: line_total is the order-line total repeated on every shipment row; revenue is sum(line_total / shipment_count), not a plain sum.
+trap-credit-notes-join	*.sql,*/repositories/*.ts,*/repositories/*/*.ts,*/warehouse/*	analytics\.credit_notes	(^|[^a-z_])join([^a-z_]|$)	group[[:space:]]+by	data-traps 3: analytics.credit_notes is not deduplicated; aggregate to one row per credit note (or per day) before joining.
+trap-receivables-channel	*.sql,*/repositories/*.ts,*/repositories/*/*.ts,*/warehouse/*	analytics\.invoices_daily	paid_amount	channel	data-traps 5: invoices_daily mixes direct and marketplace invoices; filter channel = 'direct' on every leg of a receivables metric.
+view-select-star	*.sql,*/views/*,*/migrations/*	create[[:space:]]+(or[[:space:]]+replace[[:space:]]+)?(materialized[[:space:]]+)?view	select[[:space:]]+\*	-	a view built on select * changes its columns whenever the source table does, and the routes and BI questions that read it break silently; list the columns.
+error-without-code	*/src/*.ts,*/src/*/*.ts,*/src/*/*/*.ts	error_message["']?[[:space:]]*:[[:space:]]*["'`]	-	(^|[^a-z_])error["']?[[:space:]]*:[[:space:]]*["'`]?[a-z_]	api-contract (Errors): every error response has a stable `error` code the UI can act on, not only a free-text error_message; add the code and its row in the handoff doc.

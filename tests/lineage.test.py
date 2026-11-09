@@ -227,6 +227,15 @@ try:
     check(st == {"a": "fail", "b": "fail", "c": "unreadable", "d": "pass"}, "traps: pass / fail / unreadable", st)
     check(out["blocking"] == ["a"] and out["notify"] == ["b"] and out["unreadable"] == ["c"],
           "traps: a failing block check blocks, notify doesn't, an error is unreadable (never a pass)", out)
+    # Baseline: known violations no worse than their entry don't block; worse ones do; a check
+    # that passes again while it has an entry is listed as stale.
+    out = TR.run(sample, env={}, runner=fake, baseline={"a": 3, "b": 0.6, "d": 12})
+    st = {r["id"]: r["status"] for r in out["results"]}
+    check(st["a"] == "baseline" and out["blocking"] == [] and "a" in out["baselined"],
+          "traps: a violation at its baseline value is known, not blocking", out)
+    check(st["b"] == "fail" and out["notify"] == ["b"], "traps: worse than the baseline is a normal fail", st)
+    check(out["stale_baseline"] == ["d"], "traps: a passing check with a baseline entry is stale", out)
+    check(TR.load_baseline() == {} or isinstance(TR.load_baseline(), dict), "traps: the baseline file loads")
 except ImportError:
     print("skip traps runner tests: pyyaml not installed (CI has it)")
 
