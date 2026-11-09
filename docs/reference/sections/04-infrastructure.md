@@ -154,7 +154,9 @@ Queries: `impact <node>` (what changes if it changes), `upstream <node>` (what i
   the skills, agent prompts, reference sections and `docs/*.md` name must exist (placeholders,
   per-machine files and other repos' paths are skipped); protected paths, trap baseline ids and
   edit-check ids are checked, and the plugin versions in a reference table must match each
-  `plugin.json`. Prints `refcheck: clean` or one line per problem.
+  `plugin.json`. A path counts when git tracks it, or ignores it on purpose (a file setup
+  generates, like `service/<agent>/.mcp.json`), so the result is the same on every machine and in
+  CI. Prints `refcheck: clean` or one line per problem.
 
 ## Notifications: n8n and Telegram (`infra/n8n/`)
 

@@ -18,9 +18,11 @@ are skipped.
 """
 from __future__ import annotations
 
+import fnmatch
 import glob
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -76,10 +78,48 @@ def path_candidates(token: str, src: Path):
     return None
 
 
+_TRACKED = None
+
+
+def tracked():
+    """(files, folders) git tracks here, so a file that exists only on this machine doesn't count;
+    None outside a git checkout (then the file system decides)."""
+    global _TRACKED
+    if _TRACKED is None:
+        try:
+            out = subprocess.run(["git", "-C", str(ROOT), "ls-files", "-z"], capture_output=True, check=True).stdout
+            files = {f for f in out.decode("utf-8", "replace").split("\0") if f}
+            dirs = {str(Path(f).parents[i]) for f in files for i in range(len(Path(f).parents) - 1)}
+            _TRACKED = (files, dirs)
+        except (OSError, subprocess.CalledProcessError):
+            _TRACKED = False
+    return _TRACKED or None
+
+
+def ignored(rel: str) -> bool:
+    """A git-ignored path (a file setup generates, like service/<agent>/.mcp.json): documenting it is
+    fine even though no checkout has it. A glob is tested with a sample name."""
+    sample = re.sub(r"\*+|\?|\[[^]]*\]", "x", rel)
+    try:
+        return subprocess.run(["git", "-C", str(ROOT), "check-ignore", "-q", "--no-index", sample],
+                              capture_output=True).returncode == 0
+    except OSError:
+        return False
+
+
 def exists(rel: str) -> bool:
+    rel = rel.rstrip("/")
+    t = tracked()
+    if t is None:
+        if any(c in rel for c in "*?["):
+            return bool(glob.glob(str(ROOT / rel), recursive=True))
+        return (ROOT / rel).exists()
+    files, dirs = t
     if any(c in rel for c in "*?["):
-        return bool(glob.glob(str(ROOT / rel), recursive=True))
-    return (ROOT / rel).exists()
+        found = any(fnmatch.fnmatchcase(f, rel) for f in files) or any(fnmatch.fnmatchcase(d, rel) for d in dirs)
+    else:
+        found = rel in files or rel in dirs
+    return found or ignored(rel)
 
 
 def main() -> int:
