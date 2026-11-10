@@ -16,7 +16,7 @@ Service agents are Claude Code runs with no person at the keyboard. Each has its
 | analyst | one deep analysis of one bug or feature per run | every 10 min | `opus` | 150 |
 | release | gate on `dev` → `main` merge requests | every 15 min | `sonnet` | 40 |
 | nightly | boards in line with the day's work, findings, standup report | once a night | `sonnet` | 300 |
-| jenkins-watch (optional) | failed and stuck Jenkins jobs, assessed, to a Telegram topic | every 15 min, when something changed | `sonnet` | 40 |
+| jenkins-watch (optional) | failed and stuck Jenkins jobs, assessed, to a Telegram topic | every 30 min, when something changed | `sonnet` | 60 |
 | agent-mcp | answers teammates' agents, read-only | on demand (HTTP server) | configurable | 20 / 50 / 120 by depth |
 
 Every model and turn cap can be overridden in the env file (`AGENT_MODEL_<AGENT>`,
@@ -81,7 +81,7 @@ passed to curl on stdin, never in argv). `AGENT_ALERTS=off` = log only.
 | analyst | every 600 s | `agent-analyst.timer`, 10 min |
 | release | every 900 s | `agent-release.timer`, 15 min |
 | nightly | `infra/bin/nightly.sh` once a night, `nightly-send.sh` in the morning | a nightly timer (see `infra/systemd/`) |
-| jenkins-watch | every 900 s (`JENKINS_WATCH=true`) | `agent-jenkins-watch.timer`, 15 min |
+| jenkins-watch | every 1800 s (`JENKINS_WATCH=true`) | `agent-jenkins-watch.timer`, 30 min |
 | Telegram poller (jenkins-watch) | every 60 s, at load | `telegram-poll.timer`, every minute |
 | agent-mcp | always on (`KeepAlive`) | a long-running service (see `infra/systemd/`) |
 | wake listener | always on | a long-running service (see `infra/systemd/`) |
@@ -258,10 +258,16 @@ Full description: `infra/jenkins-watch/README.md`.
   finds failed jobs (red, yellow, aborted) and stuck builds (`getBuild` of running jobs: more than
   `JENKINS_WATCH_STUCK_FACTOR` (2) × the median duration of recent builds and at least
   `JENKINS_WATCH_STUCK_MIN` (30) minutes), and a queue waiting two checks in a row. It diffs them
-  against `~/.local/share/agent-ops/jenkins-watch/state.json` into events (`new`, `again`,
-  `recovered` for an incident the group heard of) and adds the topic's new alerts from other bots,
-  linked to the jobs they name. It writes `facts.json`; exit 1 = nothing new (no Claude run), 3 =
-  Jenkins unreadable.
+  against `~/.local/share/agent-ops/jenkins-watch/state.json` into events (`new`, `again` when the
+  problem changes kind, `recovered` for an incident the group heard of) and adds the topic's new
+  alerts from other bots, linked to the jobs they name. It writes `facts.json`; exit 1 = nothing new
+  (no Claude run), 3 = Jenkins unreadable.
+- **Once is enough** (`told` in `state.json`). A job's problem is told once: the same job with the
+  same kind of problem (a newer failed build, the next slow build, the notifier's repeat alert)
+  gives no event, post, reply or mention until the job has been fine for
+  `JENKINS_WATCH_QUIET_HOURS` (24) or the problem changes kind (stuck → failed). A recovery is one
+  reply under the first post, without a mention, once; `post` enforces it. Open incidents posted
+  before `told` existed are seeded into it.
 - **Poller.** `infra/telegram/poll.py` (every 60 s) reads the team bot's updates with getUpdates
   (outbound only) and stores the watched chat's messages for 30 days. The bot only receives another
   bot's messages with Bot-to-Bot Communication Mode on (@BotFather) and as an admin of the group.
@@ -269,13 +275,17 @@ Full description: `infra/jenkins-watch/README.md`.
   current state. Verdict `attention` (a real error, or one repeating), `transient` (a dropped
   connection, a timeout, already passing), `stuck` (stuck builds and the queue) or `recovered`. For a
   job of one of the team's projects it looks at recent commits in the job's repo, and at `lineage
-  impact` for who is affected. Every alert from another bot about a job it assesses gets a reply.
+  impact` for who is affected. Every `attention` failure is investigated in the job's `repo` (and
+  `code`): the job's definition, the failing script or SQL and 14 days of commits to them; the line
+  names the file, the cause and a matching commit. Every alert from another bot about a job it
+  assesses gets a reply.
 - **Post.** The agent writes only `decisions.json` and runs `watch.py post`, the only thing that
   talks to Telegram: one HTML summary per run, grouped Needs attention / Stuck / Passing blips /
-  Recovered, with the owner mentioned on attention and stuck; at most 5 replies per job, one second
+  Recovered, with the owner mentioned on attention and stuck (a recovery is never a summary line); at most 5 replies per job, one second
   apart. It keeps the message ids for later replies and records the report in the action journal.
 - **Owners.** `knowledge/jenkins-owners.yaml`: ordered job-name patterns → a project key (or `infra`
-  / `other`) and a `people.yaml` key; first match wins. A mention is the person's
+  / `other`), a `people.yaml` key, and optionally `repo` (the clone with the job's definition and
+  the scripts it runs) and `code` (a second repo whose code it runs); first match wins. A mention is the person's
   `telegram_username`, or a link to their `telegram_chat_id`.
 - **Permissions** (`service/jenkins-watch/.claude/settings.json`): `dontAsk`; extra directories
   `/srv/repos` and `~/.local/share/agent-ops/jenkins-watch`. Allowed: Read, Grep, Glob;
@@ -286,9 +296,13 @@ Full description: `infra/jenkins-watch/README.md`.
 - **Tests.** `tests/jenkins-watch.test.py` (a fake Jenkins MCP and a fake Telegram): idle when quiet;
   a new failure and a stuck build with project and owner; no write tool called; the poller (watched
   chat only, offset kept, `chats`); an alert linked to its job; post (one summary in the topic, the
-  owner mentioned, a reply to the alert, ids kept, decisions consumed, journaled); `recovered`; a
-  blip nobody heard of closing quietly; the precheck path; unreachable Jenkins giving exit 3.
-  `tests/run-agent.test.sh` checks Sonnet, 40 turns and that its precheck always runs.
+  owner mentioned, a reply to the alert, ids kept, decisions consumed, journaled); `recovered`;
+  once is enough (the recovery one reply under the first post without a mention, the same problem,
+  a newer failed build and the notifier's repeat alert silent, a second recovery silent, stuck →
+  failed posted, news again after the quiet period, pre-`told` incidents seeded); `repo`/`code`
+  from the owner rules; a blip nobody heard of closing quietly; the precheck path; unreachable
+  Jenkins giving exit 3. `tests/run-agent.test.sh` checks Sonnet, 60 turns and that its precheck
+  always runs.
 
 ## agent-mcp
 

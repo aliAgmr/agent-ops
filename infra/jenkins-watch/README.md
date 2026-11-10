@@ -1,16 +1,16 @@
 # Jenkins watcher (optional)
 
-Every 15 minutes it looks at all Jenkins jobs. When something changed, it tells the team's Telegram
+Every 30 minutes it looks at all Jenkins jobs. When something changed, it tells the team's Telegram
 topic in a few English lines which jobs need a person and which are passing blips, and mentions the
 job's owner. It also replies to a Jenkins notifier bot's own alerts in that topic with its
 assessment. It is read-only on Jenkins and never runs a job.
 
 ```
 every 60 s       infra/telegram/poll.py      getUpdates → the watched topic's messages (SQLite)
-every 15 min     run-agent.sh jenkins-watch
+every 30 min     run-agent.sh jenkins-watch
                    precheck: watch.py collect   Jenkins MCP (read-only) + new alerts → facts.json
                              exit 1 = nothing new → no Claude run; 3 = Jenkins unreadable
-                   service/jenkins-watch (Sonnet, 40 turns): reads logs, decides → decisions.json
+                   service/jenkins-watch (Sonnet, 60 turns): reads logs and the job's repo, decides → decisions.json
                    watch.py post                 one summary + replies → Telegram; ids → state.json
 ```
 
@@ -22,10 +22,10 @@ the team bot (`TELEGRAM_BOT_TOKEN`) can post in.
 
 | Incident | When | Event |
 |---|---|---|
-| failed | the last finished build is red (failure), yellow (unstable) or aborted | `new`, `again` (a newer build failed too) |
+| failed | the last finished build is red (failure), yellow (unstable) or aborted | `new`; `again` when a stuck build then fails |
 | stuck | a build runs longer than `JENKINS_WATCH_STUCK_FACTOR` (2) × its usual duration, at least `JENKINS_WATCH_STUCK_MIN` (30) min | `new` |
 | queue | builds waiting to start in two checks in a row | `new` |
-| — | an incident the group heard about turns green | `recovered` (reply to the earlier message) |
+| — | an incident the group heard about turns green | `recovered` (one reply under the first post) |
 | — | another bot posts in the topic | `alerts` (linked to the jobs its text names) |
 
 The **usual duration** is the median of the last 10 finished builds the watcher saw. Before it has
@@ -38,9 +38,23 @@ incident is never reposted, and a failure that recovers before anyone was told c
 incident no run has assessed yet (the agent failed, or never posted) is offered again on the next
 check, so a failed run can't lose a report.
 
-**Project and owner** come from `knowledge/jenkins-owners.yaml`: ordered job-name patterns → a
-project key (or `infra` / `other`) and a `people.yaml` key. A mention is the person's
-`telegram_username`, or a link to their `telegram_chat_id` when they have no username.
+**Once is enough.** The group hears about a job's problem once (`told` in `state.json`). The same job
+with the same kind of problem (a newer failed build, the next slow build, the notifier's repeat
+alert) makes no event, no post, no reply and no mention, until the job has been fine for
+`JENKINS_WATCH_QUIET_HOURS` (24) or the problem changes kind (stuck → failed). A recovery is one
+short reply under the first post, without a mention, once; `post` enforces it whatever the agent
+wrote. Incidents posted before this memory existed count as told.
+
+**Investigation.** For every `attention` failure the agent opens the job's definition in its repo
+(its Jenkinsfile or job config, e.g. `jenkins/jobs/<job>.xml`), the script or SQL the failing step
+runs, and the last 14 days of commits to them, and names the file, the cause and the commit it
+finds (or says no recent change matches).
+
+**Project, owner and repos** come from `knowledge/jenkins-owners.yaml`: ordered job-name patterns →
+a project key (or `infra` / `other`), a `people.yaml` key, and optionally `repo` (the clone in
+`/srv/repos` with the job's definition and the scripts it runs) and `code` (a second repo whose code
+it runs). A mention is the person's `telegram_username`, or a link to their `telegram_chat_id` when
+they have no username.
 
 ## Setup (once)
 
@@ -60,7 +74,7 @@ project key (or `infra` / `other`) and a `people.yaml` key. A mention is the per
 
 | | macOS (launchd) | Linux (systemd) |
 |---|---|---|
-| agent | `io.agent-ops.agent-jenkins-watch`, every `JENKINS_WATCH_INTERVAL` (900) s | `agent-jenkins-watch.timer` → `agent@.service` (instance `jenkins-watch`) |
+| agent | `io.agent-ops.agent-jenkins-watch`, every `JENKINS_WATCH_INTERVAL` (1800) s | `agent-jenkins-watch.timer` → `agent@.service` (instance `jenkins-watch`) |
 | poller | `io.agent-ops.telegram-poll`, every 60 s | `telegram-poll.timer` → `telegram-poll.service` |
 
 The poller consumes the bot's updates, which `infra/n8n/telegram-chat-ids.sh` also reads: stop the
@@ -70,8 +84,8 @@ poller while people press Start on the bot and you run that script.
 
 - `~/.local/share/agent-ops/telegram/messages.sqlite3` (mode 600): the watched chat's messages, kept
   30 days. No other chat's text is stored; `chats` keeps only ids, titles and bot usernames of groups.
-- `~/.local/share/agent-ops/jenkins-watch/state.json`: open incidents, the message ids sent, build
-  durations. `facts.json` holds the last collect; `decisions.json` is what the agent decided, renamed
+- `~/.local/share/agent-ops/jenkins-watch/state.json`: open incidents, the message ids sent, what
+  the group was told (`told`), build durations. `facts.json` holds the last collect; `decisions.json` is what the agent decided, renamed
   to `decisions.posted.json` once sent.
 - `watch.py status` shows the open incidents; `poll.py recent 5` the last stored messages.
 

@@ -39,7 +39,7 @@ SSH tunnels if you need them. Flags choose what to load (`ENABLE_TIMERS`, `NIGHT
 `/etc/agent-ops/env`, and installs `infra/systemd/agent@.service` (oneshot, `NoNewPrivileges`,
 `ProtectSystem=full`, write access only to the log, lock, agent-ops, repos and home paths) with one
 timer per agent, plus services for agent-mcp and the wake listener. `JENKINS_WATCH=true` adds the
-`agent-jenkins-watch.timer` and the Telegram poller (`telegram-poll.service` + `.timer`, every
+`agent-jenkins-watch.timer` (every 30 min) and the Telegram poller (`telegram-poll.service` + `.timer`, every
 minute, started at once).
 
 ## Adapters: task board and code host (`infra/adapters/`)
@@ -212,7 +212,7 @@ database daily, keeping a week.
 | Code hosts | per `code_hosts` key: `CODEHOST_<KEY>_TOKEN` (read-only), `CODEHOST_<KEY>_RELEASE_TOKEN` |
 | Data | `PG_RO_URL`, `CH_RO_HOST`, `CH_RO_PORT`, `CH_RO_SECURE`, `CH_RO_USER`, `CH_RO_PASSWORD`, `METABASE_URL`, `METABASE_AGENT_API_KEY`, `JENKINS_MCP_URL`, `JENKINS_RO_AUTH`, `FIGMA_RO_TOKEN` |
 | Notify | `TELEGRAM_BOT_TOKEN`, `ALERTS`, `WAKE_TOKEN` |
-| Jenkins watcher (optional) | `TELEGRAM_WATCH_CHAT_ID`, `TELEGRAM_WATCH_TOPIC_ID`, `TELEGRAM_BOT_USERNAME`, `JENKINS_WATCH_STUCK_FACTOR`, `JENKINS_WATCH_STUCK_MIN` (plus `JENKINS_MCP_URL`, `JENKINS_RO_AUTH`) |
+| Jenkins watcher (optional) | `TELEGRAM_WATCH_CHAT_ID`, `TELEGRAM_WATCH_TOPIC_ID`, `TELEGRAM_BOT_USERNAME`, `JENKINS_WATCH_STUCK_FACTOR`, `JENKINS_WATCH_STUCK_MIN`, `JENKINS_WATCH_QUIET_HOURS` (plus `JENKINS_MCP_URL`, `JENKINS_RO_AUTH`) |
 | Paths and URLs | `AGENT_OPS_ROOT`, `AGENT_REPOS_DIR`, `AGENT_LOG_ROOT`, `AGENT_MCP_PUBLIC_URL` |
 
 Every credential is read-only except the release agent's code-host token. Revert tokens never go
@@ -230,5 +230,5 @@ in this file.
 | answer quality counts | `~/.local/share/agent-mcp/answers-quality.jsonl` |
 | lineage cache | `~/.local/share/agent-ops/lineage.json` |
 | nightly passes | `/srv/nightly/<date>/` |
-| Jenkins watcher: incidents, message ids, last facts and decisions | `~/.local/share/agent-ops/jenkins-watch/` |
+| Jenkins watcher: incidents, message ids, what the group was told, last facts and decisions | `~/.local/share/agent-ops/jenkins-watch/` |
 | the watched Telegram topic's messages (30 days) | `~/.local/share/agent-ops/telegram/messages.sqlite3` |

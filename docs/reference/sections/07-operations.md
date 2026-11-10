@@ -114,8 +114,10 @@ bash infra/bin/run-agent.sh jenkins-watch            # one tick now (collect run
 - Pause it like any agent (`<log root>/jenkins-watch/paused`), or turn its schedule off
   (`launchctl bootout gui/$(id -u)/io.agent-ops.agent-jenkins-watch`;
   `systemctl disable --now agent-jenkins-watch.timer`). The poller is independent.
-- A job is mapped to the wrong project or owner: edit `knowledge/jenkins-owners.yaml` (first match
-  wins).
+- A job is mapped to the wrong project, owner or repo: edit `knowledge/jenkins-owners.yaml` (first
+  match wins).
+- The group should hear about a known problem again sooner: lower `JENKINS_WATCH_QUIET_HOURS` (24),
+  or delete the job's entry under `told` in `state.json`.
 - It never replies to the CI bot's alerts: check that Bot-to-Bot Communication Mode is on and that
   the bot is still an admin (`poll.py chats` lists the notifier under `bot_senders`).
 

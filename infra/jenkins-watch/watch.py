@@ -8,7 +8,7 @@ agents' read-only user, through the Jenkins MCP server); it never runs, stops or
   watch.py post        send what the agent decided (decisions.json) and remember the message ids
   watch.py status      the open incidents
 
-One run every 15 minutes (service/jenkins-watch, run-agent.sh): `collect` is its precheck
+One run every 30 minutes (service/jenkins-watch, run-agent.sh): `collect` is its precheck
 (infra/bin/precheck.py; exit 3 = the check failed), so a quiet Jenkins costs no Claude tokens. The
 agent reads the logs, decides whether a failure needs attention or is a passing blip (a dropped
 connection that the next build fixed), and writes decisions.json; `post` is the only thing that
@@ -19,12 +19,19 @@ Incidents (state.json), one per job:
   stuck   a build has run longer than STUCK_FACTOR × its usual duration (median of the builds this
           watcher saw finish; at least STUCK_MIN minutes)
   queue   builds have been waiting to start for two checks in a row (Jenkins exposes only a count)
-Events: new, again (a newer build failed too), recovered (the job is green again), and new alerts
-from other bots in the topic. Only events wake the agent; an unchanged incident is not reposted.
+Events: new, again (the problem changed, e.g. stuck → failed), recovered (the job is fine again),
+and new alerts from other bots in the topic. Only events wake the agent.
+
+Once is enough (`told` in state.json): the group hears about a job's problem once. While the same
+job has the same kind of problem again (a newer build failed too, the next build is slow again, the
+Jenkins notifier alerts about it again), there is no event, no post, no reply and no mention, until
+the job has been fine for JENKINS_WATCH_QUIET_HOURS (24) or the problem changes kind. A recovery
+gets one short reply under the first post, without a mention, once per told problem.
 
 Settings (env file, infra/env.template): JENKINS_MCP_URL, JENKINS_RO_AUTH, TELEGRAM_BOT_TOKEN,
 TELEGRAM_WATCH_CHAT_ID, TELEGRAM_WATCH_TOPIC_ID, TELEGRAM_BOT_USERNAME, JENKINS_WATCH_STUCK_MIN (30),
-JENKINS_WATCH_STUCK_FACTOR (2). Owners: knowledge/jenkins-owners.yaml; mentions: people.yaml.
+JENKINS_WATCH_STUCK_FACTOR (2), JENKINS_WATCH_QUIET_HOURS (24). Owners and the repos to investigate
+in: knowledge/jenkins-owners.yaml; mentions: people.yaml.
 Standard library only.
 """
 from __future__ import annotations
@@ -137,10 +144,12 @@ def owner_rules() -> List[Dict[str, str]]:
 
 
 def classify(job: str, rules: List[Dict[str, str]]) -> Dict[str, str]:
+    """The first matching rule: project, owner, and the repos to investigate in (`repo`, `code`)."""
     for r in rules:
         if r.get("match") and re.search(str(r["match"]), job, re.I):
-            return {"project": str(r.get("project") or "other"), "owner": str(r.get("owner") or ""), "rule": str(r["match"])}
-    return {"project": "other", "owner": "", "rule": ""}
+            return {"project": str(r.get("project") or "other"), "owner": str(r.get("owner") or ""), "rule": str(r["match"]),
+                    "repo": str(r.get("repo") or ""), "code": str(r.get("code") or "")}
+    return {"project": "other", "owner": "", "rule": "", "repo": "", "code": ""}
 
 
 # ----------------------------------------------------------------------------------- collect
@@ -153,7 +162,22 @@ def collect(jm: JenkinsMCP, state: Dict[str, Any], rules: List[Dict[str, str]], 
     durations: Dict[str, List[int]] = state.setdefault("durations", {})
     seen_builds: Dict[str, int] = state.setdefault("seen_builds", {})
     incidents: Dict[str, Dict[str, Any]] = state.setdefault("incidents", {})
+    told: Dict[str, Dict[str, Any]] = state.setdefault("told", {})
+    quiet_s = float(env.get("JENKINS_WATCH_QUIET_HOURS", "24")) * 3600
     events: List[Dict[str, Any]] = []
+    # Incidents posted before `told` existed (or whose post didn't record it) count as told.
+    for name, inc in incidents.items():
+        if inc.get("messages") and name not in told:
+            told[name] = {"kind": inc.get("kind"), "at": int(now), "healthy_since": None,
+                          "recovered_told": False, "messages": list(inc["messages"])}
+
+    def heard(name: str, kind: Optional[str] = None) -> bool:
+        """The group was told about this job's problem (of this kind) and the job hasn't been fine
+        for the quiet period since."""
+        t = told.get(name)
+        if not t or (kind and t.get("kind") != kind):
+            return False
+        return t.get("healthy_since") is None or now - t["healthy_since"] < quiet_s
     jobs = jm.jobs()
     current: Dict[str, Dict[str, Any]] = {}
 
@@ -200,15 +224,26 @@ def collect(jm: JenkinsMCP, state: Dict[str, Any], rules: List[Dict[str, str]], 
 
     for name, cur in current.items():
         old = incidents.get(name)
-        info = classify(name, rules) if name != "(queue)" else {"project": "jenkins", "owner": "", "rule": ""}
+        info = classify(name, rules) if name != "(queue)" else {"project": "jenkins", "owner": "", "rule": "", "repo": "", "code": ""}
         if not old:
+            if heard(name, cur["kind"]):
+                # The same problem the group already heard of: track it, say nothing.
+                told[name]["healthy_since"] = None
+                incidents[name] = {**cur, **info, "since": now, "first_build": cur.get("build"), "quiet": True,
+                                   "verdict": "told", "messages": list(told[name].get("messages") or []), "alerts": []}
+                continue
             incidents[name] = {**cur, **info, "since": now, "first_build": cur.get("build"), "messages": [], "alerts": []}
             events.append({"event": "new", "job": name, **incidents[name]})
         else:
-            changed = cur["kind"] != old["kind"] or (cur.get("build") and cur.get("build") != old.get("build"))
+            kind_changed = cur["kind"] != old["kind"]
+            build_changed = bool(cur.get("build") and cur.get("build") != old.get("build"))
             old.update({k: v for k, v in cur.items()})
-            if changed:
+            if kind_changed and not heard(name, cur["kind"]):
+                old.pop("quiet", None)
+                old["verdict"] = None              # new information: assess it and tell it
                 events.append({"event": "again", "job": name, **old})
+            elif build_changed and not (old.get("quiet") or old.get("messages") or heard(name)):
+                events.append({"event": "again", "job": name, **old})   # not told yet: offer it again
     # An incident no run has assessed yet (the agent failed, or its post never ran) is offered again,
     # so a failed run never loses a report; `post` marks every job it was shown as assessed.
     evented = {e["job"] for e in events}
@@ -217,15 +252,26 @@ def collect(jm: JenkinsMCP, state: Dict[str, Any], rules: List[Dict[str, str]], 
             events.append({"event": "new", "job": name, "retry": True, **inc})
     for name in [n for n in incidents if n not in current]:
         inc = incidents.pop(name)
-        if inc.get("messages") or inc.get("alerts"):     # tell the group only about what it heard of
+        t = told.get(name)
+        if t:
+            t["healthy_since"] = now
+        # Tell the group only about what it heard of, and only once per told problem.
+        if (inc.get("messages") or inc.get("alerts")) and not (t and t.get("recovered_told")):
             events.append({"event": "recovered", "job": name, **inc})
+    for name in [n for n, t in told.items() if n not in incidents and t.get("healthy_since")
+                 and now - t["healthy_since"] >= quiet_s]:
+        del told[name]                                   # fine for the quiet period: a new problem is news again
 
     alerts = new_alerts(env, state)
+    evented = {e["job"] for e in events}
+    known = set(incidents) | evented | set(told)
     for a in alerts:
-        a["jobs"] = [n for n in list(incidents) + [e["job"] for e in events] if n != "(queue)" and n.lower() in (a["text"] or "").lower()]
+        a["jobs"] = [n for n in sorted(known) if n != "(queue)" and n.lower() in (a["text"] or "").lower()]
         for n in a["jobs"]:
             if n in incidents and a["message_id"] not in incidents[n]["alerts"]:
                 incidents[n]["alerts"].append(a["message_id"])
+    # An alert only about problems the group already heard of gets no reply.
+    alerts = [a for a in alerts if not a["jobs"] or any(n in evented or not heard(n) for n in a["jobs"])]
 
     return {"checked_at": int(now), "jobs": len(jobs), "open": len(incidents),
             "events": events, "alerts": alerts,
@@ -318,8 +364,16 @@ def post(state: Dict[str, Any], decisions: Dict[str, Any], env: Dict[str, str]) 
     if not token or not chat:
         raise SystemExit("TELEGRAM_BOT_TOKEN and TELEGRAM_WATCH_CHAT_ID must be set")
     team = people()
-    items = [d for d in decisions.get("items", []) if d.get("post", True)]
     incidents = state.setdefault("incidents", {})
+    told = state.setdefault("told", {})
+    now = time.time()
+    # A recovery is never a summary line: one short reply under the first post about it, no mention.
+    for d in decisions.get("items", []):
+        if d.get("verdict") == "recovered":
+            d["post"] = False
+            first = (told.get(d["job"]) or {}).get("messages") or (incidents.get(d["job"]) or {}).get("messages") or []
+            d["reply_to"] = [first[0]] if first else list(d.get("reply_to") or [])[:1]
+    items = [d for d in decisions.get("items", []) if d.get("post", True)]
     sent: Dict[str, Any] = {"summary": None, "replies": []}
     if items:
         mid = send(token, chat, compose(decisions, team), topic)
@@ -336,8 +390,20 @@ def post(state: Dict[str, Any], decisions: Dict[str, Any], env: Dict[str, str]) 
             text = f"<b>{html.escape(d['job'])}</b>: {html.escape(d['reply'])}"
             if d.get("owner") and d.get("verdict") in ("attention", "stuck"):
                 text += f" · {mention(d['owner'], team)}"
-            sent["replies"].append({"to": m, "id": send(token, chat, text, topic, reply_to=m)})
+            sent["replies"].append({"to": m, "id": send(token, chat, text, topic, reply_to=m), "job": d["job"]})
             time.sleep(1)                           # Telegram's bot-to-bot guidance: no reply bursts
+    # Remember what the group was told, so the same problem isn't told again (see `told`).
+    for d in decisions.get("items", []):
+        job, verdict = d.get("job"), d.get("verdict")
+        replied = [r["id"] for r in sent["replies"] if r.get("job") == job]
+        if verdict == "recovered":
+            if job in told and replied:
+                told[job]["recovered_told"] = True
+            continue
+        posted = bool(d.get("post", True) and sent["summary"])
+        if job in incidents and (posted or replied):
+            told[job] = {"kind": incidents[job].get("kind"), "at": int(now), "healthy_since": None,
+                         "recovered_told": False, "messages": ([sent["summary"]] if posted else []) + replied}
     # Every job the agent was shown counts as assessed, posted or not, so it isn't offered again.
     shown = {e["job"] for e in load_json(DIR / "facts.json", {}).get("events", [])}
     for d in decisions.get("items", []):

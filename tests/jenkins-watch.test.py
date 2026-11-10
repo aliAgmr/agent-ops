@@ -158,6 +158,7 @@ check(rc == 0 and set(ev) == {"etl-orders-daily", "nightly-warehouse-load"}, "ne
 w = ev.get("etl-orders-daily", {})
 check(w.get("kind") == "failed" and w.get("result") == "FAILURE" and w.get("project") == "ANL" and w.get("owner") == "kenji",
       "failure: result, project ANL, owner from knowledge/jenkins-owners.yaml", w)
+check(w.get("repo") == "warehouse" and w.get("code") == "", "failure: the repo to investigate in comes with it", w)
 s = ev.get("nightly-warehouse-load", {})
 check(s.get("kind") == "stuck" and s.get("running_min") == 90 and s.get("usual_min") == 20.0 and s.get("project") == "ANL" and s.get("owner") == "kenji",
       "stuck: running 90 min against a usual 20 (more than 2x and 30 min)", s)
@@ -243,9 +244,84 @@ check(rc == 0 and r.get("event") == "recovered" and r.get("messages") == [9001],
 st = json.loads((T / "jw" / "state.json").read_text())
 check("etl-orders-daily" not in st["incidents"], "recovered: the incident is closed")
 
+# --- 6b. once is enough: the recovery is one reply under the first post, without a mention
+n0 = len(SENT)
+(T / "jw" / "decisions.json").write_text(json.dumps({"items": [
+    {"job": "etl-orders-daily", "verdict": "recovered", "project": "ANL", "owner": "kenji",
+     "line": "Green again since build #12.", "post": True, "reply_to": [501, 9001], "reply": "Green again since build #12."}]}))
+rc, out = run(str(ROOT / "infra/jenkins-watch/watch.py"), "post")
+new = SENT[n0:]
+check(rc == 0 and len(new) == 1 and new[0].get("reply_parameters", {}).get("message_id") == 9001
+      and "@" not in new[0].get("text", ""), "recovered: one reply under the first post, no summary, no mention", new)
+# the same job fails again within the quiet period, then again: the group already heard of it → nothing
+JOBS["etl-orders-daily"] = {"color": "red", "lastBuild": {"number": 13, "result": "FAILURE"}}
+rc, out = collect()
+check(rc == 1 and not facts()["events"], "the same problem again within 24 h: no event, no agent run", (out, facts()["events"]))
+JOBS["etl-orders-daily"] = {"color": "red", "lastBuild": {"number": 14, "result": "FAILURE"}}
+rc, out = collect()
+check(rc == 1 and not facts()["events"], "a newer failed build of a told problem: no event", facts()["events"])
+# the Jenkins bot alerts about it again: no reply either
+UPDATES.append({"update_id": 3, "message": {"message_id": 502, "message_thread_id": TOPIC, "date": int(time.time()),
+                "chat": {"id": CHAT, "type": "supergroup", "title": "Ops"},
+                "from": {"id": 42, "is_bot": True, "username": "jenkins_notify_bot"},
+                "text": "❌ Build failed: etl-orders-daily #14"}})
+run(str(ROOT / "infra/telegram/poll.py"))
+rc, out = collect()
+check(rc == 1 and not facts()["alerts"], "the Jenkins bot's repeat alert about a told problem: no reply", facts()["alerts"])
+# it recovers again: no second recovery message
+JOBS["etl-orders-daily"] = {"color": "blue", "lastBuild": {"number": 15, "result": "SUCCESS"}}
+BUILDS[("etl-orders-daily", 15)] = {"number": 15, "building": False, "duration": 70 * 60_000}
+rc, out = collect()
+check(not any(e["job"] == "etl-orders-daily" for e in facts()["events"]), "a second recovery of a told problem: silent", facts()["events"])
+# the problem changes kind (the stuck load now fails): that is news
+JOBS["nightly-warehouse-load"] = {"color": "red", "lastBuild": {"number": 4, "result": "FAILURE"}}
+rc, out = collect()
+ev = {e["job"]: e for e in facts()["events"]}
+check(rc == 0 and ev.get("nightly-warehouse-load", {}).get("event") == "again" and ev["nightly-warehouse-load"].get("kind") == "failed",
+      "stuck → failed: a new kind of problem is posted", ev)
+(T / "jw" / "decisions.json").write_text(json.dumps({"items": []}))
+run(str(ROOT / "infra/jenkins-watch/watch.py"), "post")
+# after the quiet period fine, the same job failing is news again
+quiet0 = {**ENV, "JENKINS_WATCH_QUIET_HOURS": "0"}
+subprocess.run([sys.executable, "-I", str(ROOT / "infra/jenkins-watch/watch.py"), "collect"], capture_output=True, text=True, env=quiet0, timeout=60)
+st = json.loads((T / "jw" / "state.json").read_text())
+check("etl-orders-daily" not in st.get("told", {}), "fine for the quiet period: the told memory is cleared", st.get("told"))
+JOBS["etl-orders-daily"] = {"color": "red", "lastBuild": {"number": 16, "result": "FAILURE"}}
+rc, out = collect()
+check(rc == 0 and any(e["job"] == "etl-orders-daily" and e["event"] == "new" for e in facts()["events"]),
+      "after the quiet period, a new failure is posted again", facts()["events"])
+(T / "jw" / "decisions.json").write_text(json.dumps({"items": []}))
+run(str(ROOT / "infra/jenkins-watch/watch.py"), "post")
+JOBS["etl-orders-daily"] = {"color": "blue", "lastBuild": {"number": 17, "result": "SUCCESS"}}
+JOBS["nightly-warehouse-load"] = {"color": "blue", "lastBuild": {"number": 5, "result": "SUCCESS"}}
+collect()
+
+# --- 6c. an incident posted before the told memory existed counts as told
+st = json.loads((T / "jw" / "state.json").read_text())
+st["incidents"]["billing-invoice-export"] = {"kind": "failed", "build": 3, "project": "BIL", "owner": "alex",
+                                             "verdict": "attention", "messages": [8001], "alerts": []}
+st.get("told", {}).pop("billing-invoice-export", None)
+(T / "jw" / "state.json").write_text(json.dumps(st))
+JOBS["billing-invoice-export"] = {"color": "red", "lastBuild": {"number": 4, "result": "FAILURE"}}
+rc, out = collect()
+st = json.loads((T / "jw" / "state.json").read_text())
+check(not any(e["job"] == "billing-invoice-export" for e in facts()["events"])
+      and st.get("told", {}).get("billing-invoice-export", {}).get("messages") == [8001],
+      "an incident posted before `told` existed is seeded as told: a newer failed build stays quiet", (facts()["events"], st.get("told")))
+JOBS["billing-invoice-export"] = {"color": "blue", "lastBuild": {"number": 5, "result": "SUCCESS"}}
+BUILDS[("billing-invoice-export", 5)] = {"number": 5, "building": False, "duration": 60_000}
+rc, out = collect()
+r = {e["job"]: e for e in facts()["events"]}.get("billing-invoice-export", {})
+check(r.get("event") == "recovered" and r.get("messages") == [8001], "…and its recovery is still told once", facts()["events"])
+(T / "jw" / "decisions.json").write_text(json.dumps({"items": []}))
+run(str(ROOT / "infra/jenkins-watch/watch.py"), "post")
+
 # --- 7. a failure that recovers before anyone heard of it: no recovered event
 JOBS["pricing-sync-stage"] = {"color": "red", "lastBuild": {"number": 6, "result": "FAILURE"}}
 collect()
+p = {e["job"]: e for e in facts()["events"]}.get("pricing-sync-stage", {})
+check(p.get("project") == "PRC" and p.get("owner") == "omar" and p.get("repo") == "warehouse" and p.get("code") == "pricing",
+      "owner rules: a job defined in one repo that runs another's code carries both (`repo`, `code`)", p)
 JOBS["pricing-sync-stage"] = {"color": "blue", "lastBuild": {"number": 7, "result": "SUCCESS"}}
 BUILDS[("pricing-sync-stage", 7)] = {"number": 7, "building": False, "duration": 60_000}
 rc, out = collect()

@@ -75,7 +75,7 @@ flowchart LR
 | **Lineage** | Built from your code and warehouse catalog: table → view → API route → page → metric. Lookups go `impact` (what changes downstream) and `upstream` (what it's built from). Scanners are pluggable. |
 | **Quality** | A fresh-context reviewer checks the analyst's claims against their sources. Every analysis and answer gets an unsourced-claim rate. Data-trap checks run nightly and on every release. |
 | **Service agents** | triage, analyst, release, nightly, and the optional jenkins-watch. Each runs as `claude -p` on a schedule, with a precheck that skips idle ticks, a budget gate and a circuit breaker. |
-| **Jenkins watcher** | Optional. Reads every Jenkins job read-only every 15 minutes, finds failed and stuck builds, and posts one short assessed summary to a Telegram topic, mentioning each job's owner and replying to a CI notifier bot's alerts. A quiet Jenkins costs no tokens. |
+| **Jenkins watcher** | Optional. Reads every Jenkins job read-only every 30 minutes, finds failed and stuck builds, and posts one short assessed summary to a Telegram topic, mentioning each job's owner and replying to a CI notifier bot's alerts. A quiet Jenkins costs no tokens. |
 | **agent-mcp** | Remote MCP server. Project Q&A with sources, teammate messages (Telegram), and the journal and lineage tools. Callers sign in with their own task-board token. |
 | **Desks** | Long-running personal sessions, each owning one area (BI, CI jobs, debugging), with shared rules and private state. |
 | **Adapters** | The task board and code host sit behind small interfaces: Plane, GitLab and GitHub are built in; Jira, Linear and others are a single file each ([infra/adapters](infra/adapters/README.md)). |

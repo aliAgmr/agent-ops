@@ -17,7 +17,7 @@
 #                                                 days: 0=Sunday … 6=Saturday)
 #   WAKE=true                                     instant triage from task-board webhooks (wake.py, :8766)
 #   AGENT_MCP=true                                the project Q&A + action journal server (127.0.0.1:8765)
-#   JENKINS_WATCH=true JENKINS_WATCH_INTERVAL=900 the Jenkins watcher agent (follows ENABLE_TIMERS) and its
+#   JENKINS_WATCH=true JENKINS_WATCH_INTERVAL=1800 the Jenkins watcher agent (follows ENABLE_TIMERS) and its
 #                                                 Telegram poller (every 60 s, loaded at once;
 #                                                 infra/jenkins-watch/README.md)
 #   BACKUP=true BACKUP_AT=03:15 OFFSITE_DIR=…     nightly backup of the task board, n8n and the agents' config
@@ -137,7 +137,7 @@ calendar() {
 # 5. Interval agents (systemd: agent-<name>.timer). Schedules stay off until each agent passed its
 # manual test run (SETUP.md); ENABLE_TIMERS=true loads them. JENKINS_WATCH=true adds the Jenkins watcher.
 agent_specs="${AGENTS:-triage:300 analyst:600 release:900}"
-if [ "${JENKINS_WATCH:-false}" = "true" ]; then agent_specs="$agent_specs jenkins-watch:${JENKINS_WATCH_INTERVAL:-900}"; fi
+if [ "${JENKINS_WATCH:-false}" = "true" ]; then agent_specs="$agent_specs jenkins-watch:${JENKINS_WATCH_INTERVAL:-1800}"; fi
 for spec in $agent_specs; do
   a="${spec%%:*}"; interval="${spec##*:}"
   if [ "${ENABLE_TIMERS:-false}" = "true" ]; then

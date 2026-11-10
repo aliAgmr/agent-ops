@@ -9,13 +9,28 @@ Run one Jenkins watcher tick.
      check the job now (`getJob`: is a newer build running or green?). Decide the verdict:
      `attention` (a real error a person must fix: a code or SQL error, a missing table, a permission,
      a data problem, or the same failure repeating) or `transient` (see "Don't cry wolf" in
-     CLAUDE.md). For a job of one of the team's projects, look at recent commits in its repo when the
-     error points at code or SQL.
+     CLAUDE.md).
+   - **Every `attention` failure is investigated in its repo** (`repo`, and `code` when set; about 15
+     tool calls per job) before you write its line:
+     1. The job's definition: find it with `git -C /srv/repos/<repo> ls-files` (its Jenkinsfile or
+        job config, e.g. `jenkins/jobs/<job>.xml`), then `Read` it: which step, script or SQL file
+        the failing log line belongs to.
+     2. That file: `Read` the part that failed (the query, the table, the command).
+     3. What changed: `git -C /srv/repos/<repo> log --since=14.days --format="%h %an %ad %s" --date=short -- <files>`,
+        then `git -C /srv/repos/<repo> show <sha> -- <file>` for a commit that touches what failed.
+     4. Say what you found in the line and the reply: the file (and line) that fails, the likely
+        cause, and the commit (short sha, author, date) when one matches; or "no recent change to
+        <file>; likely data or environment" when none does. Facts you saw, not guesses; a guess says so.
+     A job with no definition file in a repo (defined only in Jenkins): find the script in the log's
+     command lines and search `code` with `git grep`. A job with neither `repo` nor `code`, and a
+     transient blip, need no repo work.
    - `stuck`: the build has run `running_min` minutes against a usual `usual_min`; check its log tail
      for progress (still printing? waiting on a lock or a query?). Verdict `stuck`, or `transient` if it
      finished meanwhile.
    - `queue`: builds waiting to start for `since_min` minutes; `getStatus` for executors. Verdict `stuck`.
-   - `recovered`: verdict `recovered`, one line (e.g. "green again since build #1234").
+   - `recovered`: verdict `recovered` with a one-sentence `reply` (e.g. "Green again since build
+     #1234."). `post` sends it as one reply under the first post about it (never a summary line,
+     never a mention), whatever you put in `post` and `reply_to`.
 3. `alerts`: new messages from other bots in the topic. Each lists the `jobs` it mentions. Every alert
    about a job you assess gets a reply (its `message_id` in that item's `reply_to`). An alert about a job
    with no event (an older failure already handled, or one `collect` doesn't treat as open) still gets a

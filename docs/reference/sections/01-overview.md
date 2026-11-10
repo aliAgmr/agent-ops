@@ -77,10 +77,12 @@ run), `.mcp.json`, `.claude/settings.json` (allow and deny lists, the hooks) and
 - **nightly** (once a night): brings the boards in line with the day's merged work, files
   findings (failing tests, vulnerable dependencies, leaked secrets, failing data checks), and
   writes a morning standup report.
-- **jenkins-watch** (optional, every 15 minutes when something changed): reads every Jenkins job
+- **jenkins-watch** (optional, every 30 minutes when something changed): reads every Jenkins job
   read-only, decides which failures need a person and which are passing blips (a dropped connection
   the next build fixed), and posts one short summary to the team's Telegram topic. It mentions each
-  job's owner and replies to a CI notifier bot's alerts with its assessment. Its precheck
+  job's owner and replies to a CI notifier bot's alerts with its assessment. Each problem is told
+  once (a recovery is one reply, without a mention), and every failure that needs a person is
+  investigated in the job's repo. Its precheck
   (`infra/jenkins-watch/watch.py collect`) means a quiet Jenkins costs no tokens.
 
 ### agent-mcp (project Q&A, messaging, blame, lineage)

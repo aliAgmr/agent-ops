@@ -101,8 +101,8 @@ From the answers, write:
 - `projects.yaml`: every project with its `tracker_project_id`, filled in step 5.
 - `people.yaml`, from `people.template.yaml`. It is git-ignored: it holds emails.
 - `knowledge/lineage.yaml` (optional): metrics, page names and owners. See the example in the file.
-- `knowledge/jenkins-owners.yaml` (only with the Jenkins watcher): job-name patterns → project and
-  owner. Replace the example rules.
+- `knowledge/jenkins-owners.yaml` (only with the Jenkins watcher): job-name patterns → project,
+  owner and the repos the agent investigates a failure in (`repo`, `code`). Replace the example rules.
 
 Check: `python3 -I infra/bin/adapter repos` lists every repo you expect; `bash tools/lint.sh` is
 clean.
