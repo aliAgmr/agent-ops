@@ -57,4 +57,19 @@ rm -rf "$T/gitlab/billing-backend"; commit "$T/gitlab/warehouse" three
 bash "$SYNC" pull "$B" "$D" 2>"$T/err"; rc=$?
 check "failed pull: exit 1, the rest still pulled" '[ "$rc" = 1 ] && grep -q "pull failed in $B" "$T/err" && [ "$(cat "$D/f.txt")" = three ]'
 
+# 6. upstream history rewritten (force-push of dev): a clean clone follows it, a clone with edits doesn't
+G="$T/gitlab/warehouse"
+git -C "$G" checkout -q --orphan new && commit "$G" rewritten && git -C "$G" branch -q -M new dev
+bash "$SYNC" pull "$D" 2>"$T/err"; rc=$?
+check "rewritten upstream: a clean clone is reset to it" '[ "$rc" = 0 ] && [ "$(cat "$D/f.txt")" = rewritten ] && grep -q "was rewritten upstream" "$T/err"'
+check "rewritten upstream: the clone is exactly the upstream branch" '[ "$(git -C "$D" rev-parse HEAD)" = "$(git -C "$G" rev-parse dev)" ]'
+commit "$G" rewritten-again
+git -C "$G" checkout -q --orphan new2 && commit "$G" third-history && git -C "$G" branch -q -M new2 dev
+echo "local edit" > "$D/f.txt"
+bash "$SYNC" pull "$D" 2>"$T/err"; rc=$?
+check "rewritten upstream with local edits: left as is, reported" '[ "$rc" = 1 ] && [ "$(cat "$D/f.txt")" = "local edit" ] && grep -q "uncommitted changes" "$T/err"'
+git -C "$D" checkout -q -- f.txt
+bash "$SYNC" pull "$D" 2>/dev/null; rc=$?
+check "after the edit is gone, the next pull follows the rewrite" '[ "$rc" = 0 ] && [ "$(cat "$D/f.txt")" = third-history ]'
+
 exit "$fail"

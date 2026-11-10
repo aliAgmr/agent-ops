@@ -8,7 +8,12 @@
 #   repo-sync.sh url <dir>               # upstream URL of a clone (follows local-path origins)
 #   repo-sync.sh clone <source> <dest>   # clone from <source>'s upstream URL (or a URL)
 #   repo-sync.sh set-origin <dir>...     # point origin at the upstream URL (one-time switch)
-#   repo-sync.sh pull <dir>...           # fetch from the code host and fast-forward
+#   repo-sync.sh pull <dir>...           # fetch from the code host and fast-forward (or follow a rewrite)
+#
+# These clones are read-only mirrors: nobody commits in them. When the upstream branch's history
+# was rewritten (a force-push or a rebase), a fast-forward is impossible and the clone would stay on
+# the old history for good. `pull` then resets it to the upstream branch, but only when the clone has
+# no uncommitted changes (it never discards edits); it says so on stderr.
 #
 # Repos named in AGENT_BLOBLESS_REPOS (space-separated folder names; default none) fetch without old
 # file contents (blob:none), for large repos of which you need only a part; the checked-out files are
@@ -75,8 +80,24 @@ case "$cmd" in
     for d in "$@"; do
       d="${d%/}"; url="$(git -C "$d" remote get-url origin 2>/dev/null)" || { rc=1; continue; }
       [ -d "$url" ] && echo "repo-sync: $(basename "$d") still pulls from the local checkout $url (run: repo-sync.sh set-origin $d)" >&2
-      git_auth "$url" -C "$d" pull -q --ff-only || { echo "repo-sync: pull failed in $d" >&2; rc=1; }
+      git_auth "$url" -C "$d" fetch -q origin || { echo "repo-sync: pull failed in $d (fetch)" >&2; rc=1; continue; }
+      up="$(git -C "$d" rev-parse -q --verify '@{upstream}' 2>/dev/null)" \
+        || { echo "repo-sync: pull failed in $d (no upstream branch)" >&2; rc=1; continue; }
+      head="$(git -C "$d" rev-parse HEAD)"
+      if [ "$head" = "$up" ]; then
+        :
+      elif git -C "$d" merge-base --is-ancestor "$head" "$up"; then
+        git -C "$d" merge -q --ff-only "$up" || { echo "repo-sync: pull failed in $d" >&2; rc=1; }
+      elif [ -z "$(git -C "$d" status --porcelain --untracked-files=no)" ]; then
+        branch="$(git -C "$d" rev-parse --abbrev-ref '@{upstream}')"
+        old="$(git -C "$d" rev-list --count "$up..$head")"
+        git -C "$d" reset -q --hard "$up" \
+          && echo "repo-sync: $(basename "$d"): $branch was rewritten upstream; reset to it ($old old commits dropped)" >&2 \
+          || { echo "repo-sync: pull failed in $d (reset)" >&2; rc=1; }
+      else
+        echo "repo-sync: pull failed in $d: diverged from upstream and has uncommitted changes (left as is)" >&2; rc=1
+      fi
     done
     exit "$rc";;
-  *) sed -n '2,17p' "$0" >&2; exit 2;;
+  *) sed -n '2,23p' "$0" >&2; exit 2;;
 esac

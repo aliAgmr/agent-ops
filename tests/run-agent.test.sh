@@ -164,7 +164,8 @@ cat >"$T/git-bin/git" <<'EOF2'
 echo "$*" >> "$FAKE_DIR/git-argv"
 [ "$1" = -C ] && d="$2" || d=.
 echo "$d|${GIT_CONFIG_COUNT:-}|${GIT_CONFIG_KEY_0:-}|${GIT_CONFIG_VALUE_0:-}|${GIT_CONFIG_KEY_1:-}=${GIT_CONFIG_VALUE_1-unset}|${GIT_TERMINAL_PROMPT:-}" >> "$FAKE_DIR/git-env"
-case "$*" in *"remote get-url origin") cat "$d/.origin";; *broken*pull*) exit 1;; esac
+case "$*" in *"remote get-url origin") cat "$d/.origin";; *broken*fetch*) exit 1;;
+  *"rev-parse -q --verify @{upstream}"|*"rev-parse HEAD") echo 1111111111111111111111111111111111111111;; esac
 EOF2
 chmod +x "$T/git-bin/git"
 # the example routing.yaml: main = GitLab at gitlab.example.com, oss = GitHub at github.com
@@ -175,14 +176,14 @@ pull_run() { rm -f "$T/git-argv" "$T/git-env"; PATH="$T/git-bin:$PATH" AGENT_GIT
   AGENT_OPS_ENV=/dev/null CODEHOST_MAIN_TOKEN=main-tok-111 CODEHOST_OSS_TOKEN=oss-tok-222 run ok "$1"; }
 b64() { printf '%s:%s' "$1" "$2" | base64 | tr -d '\n'; }
 reset; pull_run triage
-check "triage pulls every repo, ff-only" '[ "$(grep -c -- "pull -q --ff-only" "$T/git-argv")" = 4 ] && grep -q -- "-C $T/repos/warehouse pull -q --ff-only" "$T/git-argv"'
+check "triage pulls every repo (fetch, then fast-forward or follow a rewrite)" '[ "$(grep -c -- "fetch -q origin" "$T/git-argv")" = 3 ] && grep -q -- "-C $T/repos/warehouse fetch -q origin" "$T/git-argv"'
 reset; pull_run analyst
-check "analyst pulls every repo too" '[ "$(grep -c -- "pull -q --ff-only" "$T/git-argv")" = 4 ]'
+check "analyst pulls every repo too" '[ "$(grep -c -- "fetch -q origin" "$T/git-argv")" = 3 ]'
 reset; pull_run triage
 check "GitLab repo: its host's read token (oauth2)" 'grep -q "^$T/repos/billing-backend|2|http.https://gitlab.example.com/.extraHeader|Authorization: Basic $(b64 oauth2 main-tok-111)|credential.helper=|0$" "$T/git-env"'
 check "GitHub repo: its host's read token (x-access-token)" 'grep -q "^$T/repos/warehouse|2|http.https://github.com/.extraHeader|Authorization: Basic $(b64 x-access-token oss-tok-222)|credential.helper=|0$" "$T/git-env"'
 check "tokens never in git argv" '! grep -qE "main-tok|oss-tok|$(b64 oauth2 main-tok-111)|$(b64 x-access-token oss-tok-222)" "$T/git-argv"'
-check "failed pull: tick still runs" '[ "$(calls)" = 1 ] && grep -q -- "-C $T/repos/broken pull" "$T/git-argv"'
+check "failed pull: tick still runs" '[ "$(calls)" = 1 ] && grep -q -- "-C $T/repos/broken fetch" "$T/git-argv"'
 reset; pull_run release
 check "release doesn't pull the repo clones" '! grep -q "$T/repos" "$T/git-argv" && [ "$(calls)" = 1 ]'
 
