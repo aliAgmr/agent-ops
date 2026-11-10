@@ -17,7 +17,7 @@
 #                                                 syntax, the host's local time)
 #   WAKE=true                                     instant triage from task-board webhooks (agent-wake, :8766)
 #   AGENT_MCP=true AGENT_MCP_HOST=127.0.0.1       the project Q&A + action journal server (:8765)
-#   JENKINS_WATCH=true JENKINS_WATCH_INTERVAL=900 the Jenkins watcher agent (follows ENABLE_TIMERS) and its
+#   JENKINS_WATCH=true JENKINS_WATCH_INTERVAL=1800 the Jenkins watcher agent (follows ENABLE_TIMERS) and its
 #                                                 Telegram poller (telegram-poll.timer, started at once;
 #                                                 infra/jenkins-watch/README.md)
 #   BACKUP=true BACKUP_ONCALENDAR="*-*-* 03:15" OFFSITE_DIR=…  nightly backup (infra/macos/backup.sh)
@@ -43,7 +43,7 @@ UNITS=/etc/systemd/system
 SYSTEMD="$HERE/systemd"
 CLAUDE_CODE_VERSION="${CLAUDE_CODE_VERSION:-stable}"
 AGENTS="${AGENTS:-triage:300 analyst:600 release:900}"
-if [ "${JENKINS_WATCH:-false}" = "true" ]; then AGENTS="$AGENTS jenkins-watch:${JENKINS_WATCH_INTERVAL:-900}"; fi
+if [ "${JENKINS_WATCH:-false}" = "true" ]; then AGENTS="$AGENTS jenkins-watch:${JENKINS_WATCH_INTERVAL:-1800}"; fi
 log() { echo "[bootstrap] $*"; }
 as_agents() { runuser -u "$AGENT_USER" -- "$@"; }
 

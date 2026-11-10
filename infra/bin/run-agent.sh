@@ -52,7 +52,7 @@ case "$AGENT" in
   analyst) MODEL="${AGENT_MODEL_ANALYST:-opus}";   TURNS="${AGENT_MAX_TURNS_ANALYST:-150}";;
   # Assesses Jenkins failures and posts a short report to the team's Telegram topic (only when
   # infra/jenkins-watch/watch.py collect, its precheck, found something new).
-  jenkins-watch) MODEL="${AGENT_MODEL_JENKINS_WATCH:-sonnet}"; TURNS="${AGENT_MAX_TURNS_JENKINS_WATCH:-40}";;
+  jenkins-watch) MODEL="${AGENT_MODEL_JENKINS_WATCH:-sonnet}"; TURNS="${AGENT_MAX_TURNS_JENKINS_WATCH:-60}";;
   release) MODEL="${AGENT_MODEL_RELEASE:-sonnet}"; TURNS="${AGENT_MAX_TURNS_RELEASE:-${AGENT_MAX_TURNS:-40}}";;
   nightly) MODEL="${AGENT_MODEL_NIGHTLY:-sonnet}"; TURNS="${AGENT_MAX_TURNS_NIGHTLY:-300}";;
 esac

@@ -1,8 +1,16 @@
-# Which project each Jenkins job belongs to and whom the Jenkins watcher (infra/jenkins-watch)
-# mentions when it needs attention. Rules are tried in order; the first `match` (a regular expression
-# over the job's full name, case-insensitive) wins. `project` is a projects.yaml key, `infra` or
-# `other`; `owner` is a people.yaml key, usually the person of the team that owns the job in
-# routing.yaml. Quote each pattern; keep one value per line.
+# Which project each Jenkins job belongs to, whom the Jenkins watcher (infra/jenkins-watch)
+# mentions when it needs attention, and where its code is. Rules are tried in order; the first
+# `match` (a regular expression over the job's full name, case-insensitive) wins. Fields:
+#   project  a projects.yaml key, `infra` or `other`
+#   owner    a people.yaml key, usually the person of the team that owns the job in routing.yaml
+#   repo     optional: the repo (its clone name in /srv/repos) that holds the job's definition (its
+#            Jenkinsfile or job config, e.g. `jenkins/jobs/<job>.xml`) and the scripts and SQL its
+#            steps run. The agent investigates every `attention` failure there: the definition, the
+#            failing script or SQL, and the last 14 days of commits to them.
+#   code     optional: a second repo whose code the job runs, when that code isn't in `repo` (or
+#            the job is defined only in Jenkins and has no `repo`)
+# Leave both out for a job whose code the agents can't read: the agent then reads its log only.
+# Quote each pattern; keep one value per line.
 #
 # This is an EXAMPLE for the "Acme" team; SETUP.md writes yours.
 
@@ -10,15 +18,19 @@ rules:
   - match: '^billing-'
     project: BIL
     owner: alex
+    repo: billing-backend
   - match: '^pricing-'
     project: PRC
     owner: omar
+    repo: warehouse              # defined in the warehouse repo's jenkins/jobs/ ...
+    code: pricing                # ... and runs the pricing engine's scripts
   - match: '^(etl|nightly)-'
     project: ANL
     owner: kenji
+    repo: warehouse
   - match: '^deploy-|monitoring|backup'
     project: infra
-    owner: lena
+    owner: lena                  # defined only in Jenkins: no repo
   - match: '.'
     project: other
     owner: lena
