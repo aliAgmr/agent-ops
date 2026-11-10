@@ -47,7 +47,9 @@ same rights it made them with.
 8. **Pulls.** `git pull --ff-only` on agent-ops itself; for triage, analyst, nightly and jenkins-watch also
    `infra/bin/repo-sync.sh pull /srv/repos/*/`, which fetches each read-only clone from its code host
    with the agents' read-only token passed as an HTTP header through `GIT_CONFIG_*` variables, never
-   on a command line or in a config file. A failed pull keeps the last copy.
+   on a command line or in a config file. It fast-forwards each clone; when upstream history was
+   rewritten (a force-push or a rebase), it resets the clone, a read-only mirror, to the upstream
+   branch instead, but only when the clone has no uncommitted changes. A failed pull keeps the last copy.
 9. **Precheck.** `infra/bin/precheck.sh <agent> <since>` (no model, through the adapters): exit 1 =
    idle, no Claude; exit 0 = work; anything else = the check broke, run anyway (fail open). A full
    run is forced at least every `AGENT_MAX_IDLE_HOURS` (6), except for jenkins-watch, whose precheck
