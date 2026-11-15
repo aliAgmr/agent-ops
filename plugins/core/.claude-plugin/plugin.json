@@ -1,7 +1,7 @@
 {
   "name": "core",
   "displayName": "Core (everyone)",
-  "version": "0.1.1",
+  "version": "0.1.0",
   "description": "Task protocol, handoffs, scope rules, the safety guard and action-journal hooks, the task board (Plane) MCP and the project Q&A server (agent-mcp). Every person and every service agent uses this.",
   "author": {
     "name": "agent-ops contributors"
