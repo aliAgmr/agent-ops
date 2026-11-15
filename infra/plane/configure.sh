@@ -12,6 +12,7 @@
 #                      project) + the bot users in people.yaml `service:`             [PLANE_PROJECT_MEMBERS]
 #   admins             the project's approvers (routing.yaml)                         [PLANE_PROJECT_ADMINS]
 #   lead               the project's question owner (routing.yaml)                    [PLANE_PROJECT_LEAD]
+#   team labels        off for a project with routing.yaml `team_labels: false`       [PLANE_TEAM_LABELS=false]
 # Emails come from people.yaml (falling back to the example people.template.yaml).
 #
 # The workspace itself, saved views and bot users are not in Plane's public API: create those by hand
@@ -55,6 +56,9 @@ else:
     for t in (proj.get("teams") or {}).values():
         t = t or {}
         keys += t.get("people") or ([t["person"]] if t.get("person") else [])
+    # the approvers, question owner, reporters and mergers of the project are on its board too
+    keys += list(proj.get("approvers") or []) + [proj.get("question_owner") or ""]
+    keys += list(proj.get("reporters") or []) + list(proj.get("merge_to_main") or [])
 bots = [str(v).strip() for k, v in service.items() if k.startswith("tracker_") and k.endswith("_bot") and v]
 approvers = proj.get("approvers") or routing.get("approvers") or []
 lead = proj.get("question_owner") or routing.get("question_owner") or ""
@@ -62,6 +66,7 @@ print("NAME=" + str((projects.get(code) or {}).get("name") or code))
 print("MEMBERS=" + ",".join(dict.fromkeys([e for e in map(email, keys) if e] + bots)))
 print("ADMINS=" + ",".join(e for e in map(email, approvers) if e))
 print("LEAD=" + email(lead))
+print("TEAM_LABELS=" + ("false" if proj.get("team_labels") is False else "true"))
 PY
 )"
 val() { sed -n "s/^$1=//p" <<<"$derived"; }
@@ -69,6 +74,7 @@ PROJECT_NAME="${PLANE_PROJECT_NAME:-$(val NAME)}"
 ADMINS="${PLANE_PROJECT_ADMINS:-$(val ADMINS)}"
 MEMBERS="${PLANE_PROJECT_MEMBERS:-$(val MEMBERS)}"
 PLANE_PROJECT_LEAD="${PLANE_PROJECT_LEAD:-$(val LEAD)}"
+TEAM_LABELS="${PLANE_TEAM_LABELS:-$(val TEAM_LABELS)}"
 
 log() { echo "[plane] $*"; }
 api() {  # method path [json]
@@ -158,6 +164,11 @@ LABELS=(
   # deep analysis before routing (bugs and features of effort s+): triage queues, the analyst agent writes it
   "analysis:needed|#A78BFA" "analysis:done|#6D28D9"
 )
+# A project without teams (routing.yaml `team_labels: false`) gets no team:* labels.
+if [ "$TEAM_LABELS" = false ]; then
+  keep=(); for l in "${LABELS[@]}"; do case "$l" in team:*) ;; *) keep+=("$l");; esac; done
+  LABELS=("${keep[@]}")
+fi
 labels="$(api GET "$P/labels/" | results)"
 for l in "${LABELS[@]}"; do
   IFS='|' read -r name color <<<"$l"

@@ -5,7 +5,10 @@ start (`SINCE`, UTC) and today's date are given at the end of this prompt. Work 
 `../../projects.yaml` (key = the board's identifier, `tracker_project_id` = its id); look up state and
 label ids per project. A repo shared by several projects (routing.yaml lists it under each, usually
 with `only:` folders): put work and findings in the project whose `only:` folder the change touches;
-if nothing says, in the project of the task or person they match. Keep a running list of every board change you make
+if nothing says, in the project of the task or person they match. A project without teams
+(routing.yaml `team_labels: false`; task-protocol, "Projects without teams"): items you create there
+get no team label and no assignee, and a short `## Plain-language brief`; its work moves `In Review` →
+`Done` when the MR into `main` is merged (no E2E step). Keep a running list of every board change you make
 (`RUN_DIR/actions.json`, see step 8): append to it right after each write, so a crash leaves it
 complete.
 

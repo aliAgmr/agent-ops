@@ -18,7 +18,7 @@ and `tick.md`. Desk sessions follow `desks/CLAUDE.md`.
 
 agent-ops is used by many teams, so nothing in the repository may identify a real team.
 - **Names:** examples use the example team (Alex, Sam, Riya, Noor, Kenji, Omar, Lena), company
-  "Acme", projects BIL / PRC / ANL, repos `acme/*`, and hosts `*.example.com`.
+  "Acme", projects BIL / PRC / ANL / LAB, repos `acme/*`, and hosts `*.example.com`.
 - **Contact details:** emails are only `@example.com`. IPs are only loopback or the documentation
   ranges (192.0.2.x, 198.51.100.x, 203.0.113.x).
 - **Secrets:** never in files, tests or examples. Tests use obvious fakes (`tok-test-…`).

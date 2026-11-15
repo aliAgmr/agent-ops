@@ -136,8 +136,14 @@ effort labels, and enforces the review rules.
 6. Ask: when it can't decide, open one `Question:` item for the project's question owner, with
    options and a recommendation, and leave the original in `Inbox`.
 
+On a project without teams (`team_labels: false`), step 5 sets no team label and no assignee (the
+item waits unassigned in `Todo`), and every item gets a "Plain-language brief" above the triage
+notes; its questions go to that project's question owner, never to its `reporters`.
+
 **Precheck:** work if any project has an `Inbox` item that isn't waiting, an answered question, a
-human change to effort-relevant fields, or a review-state move to check.
+human change to effort-relevant fields, or a review-state move to check. The boards are every key
+in `projects.yaml` plus every `routing.yaml` project (or `TRIAGE_PROJECTS`); approvers are per
+project.
 
 ## analyst
 
@@ -155,7 +161,10 @@ the task up would otherwise spend a day finding out.
    marked confirmed/likely/possible with evidence for and against → impact → fix options →
    how to verify. Feature: goal and users → what exists → data check per number → 2–3 approaches →
    plan per team → acceptance criteria.
-4. Questions with options and a recommendation; blocking ones become a question item.
+4. Questions with options and a recommendation; blocking ones become a question item. On a
+   project without teams, it also updates the item's "Plain-language brief" (files, a step-by-step
+   plan, how to check it, what could break, the repo rules and gates that apply) and words each fix
+   option for users.
 5. **Fresh check.** The whole draft goes to the `claim-checker` subagent (a smaller model,
    read-only tools, nothing but the draft): it re-opens every cited source and returns a verdict per
    claim (`supported`, `unsupported`, `unclear`, `no_source`). Unsupported claims are fixed or
@@ -233,7 +242,8 @@ write the morning report.
    of duplicates; each with its `findings-format` certainty label), reports stale baseline
    entries (`trap-baseline-stale:<id>`) and often-waived checks (`waived-often:<id>`), and writes
    the report (with an `## Agent runs` section and a **Not checked** line) and one short message
-   per person.
+   per person. On a project without teams, what it creates has no team label and no assignee, and
+   work merged into `main` of a `release: false` repo moves `In Review` → `Done`.
 5. `infra/nightly/publish.py` posts the report; `nightly-send.sh` sends the messages in the morning,
    after quiet hours.
 

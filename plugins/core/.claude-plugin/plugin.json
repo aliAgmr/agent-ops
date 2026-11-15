@@ -1,7 +1,7 @@
 {
   "name": "core",
   "displayName": "Core (everyone)",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Task protocol, handoffs, scope rules, the safety guard and action-journal hooks, the task board (Plane) MCP and the project Q&A server (agent-mcp). Every person and every service agent uses this.",
   "author": {
     "name": "agent-ops contributors"
@@ -35,7 +35,7 @@
     "role": {
       "type": "string",
       "title": "Your role",
-      "description": "One of: product, design, backend, frontend, data, devops. Decides which scope rules apply to you (devops also unlocks running non-production pipelines and CI jobs).",
+      "description": "One of: product, design, backend, frontend, data, devops, vibecoder. Decides which scope rules apply to you (devops also unlocks running non-production pipelines and CI jobs; vibecoder changes the repos of a project without teams through merge requests).",
       "required": true
     }
   }

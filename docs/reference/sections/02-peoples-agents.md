@@ -17,6 +17,7 @@ journal: as Claude Code plugins, or rendered by the `agent-ops` installer for th
 | `role-frontend` | frontend | skill `fe-integration` |
 | `role-data` | data | skill `data-delivery` |
 | `role-devops` | devops | skill `devops-workflow` |
+| `role-vibecoder` | vibecoder, or anyone on a project without teams | skills `vibe-workflow`, `explain-change`, `safe-change`, `check-before-done`, `both-sides` (merge requests through `gitlab-tools`/`github-tools`, designs through `figma-tools`) |
 | `gitlab-tools` | anyone on GitLab | GitLab MCP server (`gitlab_url`, token; read-only unless the role needs writes) |
 | `github-tools` | anyone on GitHub | GitHub's hosted MCP server (read-only header unless the role needs writes) |
 | `postgres-tools` | backend, data | Postgres MCP server with a read-only connection string |
@@ -45,7 +46,8 @@ plugins/<name>/
 
 `core` asks for `tracker_api_key` (sensitive, stored in the OS keychain), `tracker_base_url`,
 `tracker_workspace_slug`, `agent_mcp_url` (your host's public agent-mcp address, e.g.
-`https://agents.example.com/agent-mcp`) and `role`. Hooks read them as
+`https://agents.example.com/agent-mcp`) and `role` (`product`, `design`, `backend`, `frontend`,
+`data`, `devops` or `vibecoder`). Hooks read them as
 `CLAUDE_PLUGIN_OPTION_<KEY>`. Role plugins ask for the person's own read-only database URLs, a
 code-host token (`api` scope, Developer role, never Maintainer) and similar. Nothing secret is ever
 written to the repo.

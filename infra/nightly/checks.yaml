@@ -39,6 +39,19 @@ repos:
     setup: bun install --frozen-lockfile --ignore-scripts
     checks:
       lint: bun run lint
+  labs-api:            # LAB (no teams): its tests need a database and run in its own CI, so types and lint only
+    branch: main
+    image: node:22
+    setup: npm ci --ignore-scripts --no-audit --no-fund
+    checks:
+      typecheck: npm run typecheck
+      lint: npm run lint
+  labs-web:
+    branch: main
+    image: node:22
+    setup: npm ci --ignore-scripts --no-audit --no-fund
+    checks:
+      lint: npm run lint
   warehouse:
     branch: main
     only: models/      # SQL only: scans, no tests

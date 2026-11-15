@@ -219,6 +219,14 @@ ok(codex({"tool_name": "mcp__jenkins__triggerBuild", "tool_input": {"jobFullName
 ok(codex({"tool_name": "mcp__jenkins__triggerBuild", "tool_input": {"jobFullName": "billing-backend-prod"}})[0] == 2, "codex: devops can't run prod")
 kd = [r["pattern"] for r in tomllib.loads((K / "config.toml").read_text(encoding="utf-8"))["permission"]["rules"] if r["decision"] == "deny"]
 ok("mcp__*__triggerBuild" not in kd and "mcp__*__merge_merge_request" in kd, "kimi: devops keeps CI runs (guard checks the target), merges still denied", kd)
+# vibecoder (a project without teams): its role plugin's skills, no CI runs, no merges
+r = run("setup", "--role", "vibecoder", "--non-interactive")
+ok(r.returncode == 0 and all((sk / n / "SKILL.md").exists() for n in
+   ("vibe-workflow", "explain-change", "safe-change", "check-before-done", "both-sides")), "vibecoder: role-vibecoder skills installed", r.stderr)
+ok(not (sk / "api-contract").exists() and (sk / "task-protocol" / "SKILL.md").exists(), "vibecoder: core skills, no other role's")
+ok(codex({"tool_name": "mcp__jenkins__triggerBuild", "tool_input": {"jobFullName": "billing-backend-stage"}})[0] == 2, "codex: vibecoder can't run jobs")
+ok(codex({"tool_name": "mcp__gitlab__merge_merge_request", "tool_input": {"project_id": "acme/labs-web", "merge_request_iid": 3}})[0] == 2,
+   "codex: vibecoder can't merge")
 run("setup", "--role", "backend", "--non-interactive")
 ok(codex({"tool_name": "mcp__jenkins__triggerBuild", "tool_input": {"jobFullName": "billing-backend-stage"}})[0] == 2, "codex: backend can't run jobs")
 chk = run("check", "--quick").stdout

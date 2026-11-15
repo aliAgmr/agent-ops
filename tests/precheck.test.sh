@@ -49,13 +49,13 @@ unset TRIAGE_PROJECTS
 # The review rules count from this time on (as a team that rolled them out on a board with history).
 export PRECHECK_RULES_SINCE=2026-10-20T11:36:05
 SINCE="2026-10-19T12:00:00Z"
-W="workspaces_ws_"; P="${W}projects_p1_"; D="${W}projects_p2_"; S="${W}projects_p4_"   # p1 = BIL, p2 = PRC, p4 = ANL
+W="workspaces_ws_"; P="${W}projects_p1_"; D="${W}projects_p2_"; S="${W}projects_p4_"; N="${W}projects_p5_"   # p1 = BIL, p2 = PRC, p4 = ANL, p5 = LAB
 fail=0
 
 # approvers: sam + alex from routing.yaml/people.yaml (u-sam, u-alex); u-noor is not one
 reset() {
   rm -f "$FX"/*.json
-  echo '{"results":[{"id":"p1","name":"Acme Billing","identifier":"BIL"},{"id":"p2","name":"Acme Pricing","identifier":"PRC"},{"id":"p3","name":"Other","identifier":"OT"},{"id":"p4","name":"Acme Analytics","identifier":"ANL"}]}' >"$FX/${W}projects_.json"
+  echo '{"results":[{"id":"p1","name":"Acme Billing","identifier":"BIL"},{"id":"p2","name":"Acme Pricing","identifier":"PRC"},{"id":"p3","name":"Other","identifier":"OT"},{"id":"p4","name":"Acme Analytics","identifier":"ANL"},{"id":"p5","name":"Acme Labs","identifier":"LAB"}]}' >"$FX/${W}projects_.json"
   echo '{"results":[{"id":"s-in","name":"Inbox"},{"id":"s-tr","name":"Triaged"},{"id":"s-td","name":"Todo"},{"id":"s-ir","name":"In Review"},{"id":"s-e2e","name":"Ready for E2E"},{"id":"s-done","name":"Done"},{"id":"s-can","name":"Cancelled"}]}' >"$FX/${P}states_.json"
   echo '{"results":[{"id":"l-q","name":"question"},{"id":"l-na","name":"needs-approval"}]}' >"$FX/${P}labels_.json"
   # PRC: same state/label names, its own ids; idle unless a test says otherwise
@@ -66,7 +66,11 @@ reset() {
   echo '{"results":[{"id":"b-in","name":"Inbox"},{"id":"b-td","name":"Todo"},{"id":"b-ir","name":"In Review"},{"id":"b-e2e","name":"Ready for E2E"},{"id":"b-done","name":"Done"},{"id":"b-can","name":"Cancelled"}]}' >"$FX/${S}states_.json"
   echo '{"results":[{"id":"bl-q","name":"question"}]}' >"$FX/${S}labels_.json"
   anlitems '{"id":"k1","state":"b-td","labels":[],"updated_at":"2026-10-18T10:00:00Z"}'
-  echo '[{"id":"u-sam","email":"Sam@Example.com"},{"id":"u-alex","email":"alex@example.com"},{"id":"u-noor","email":"noor@example.com"},{"id":"u-kenji","email":"kenji@example.com"},{"id":"u-rel","email":"release-bot@example.com"},{"id":"u-tri","email":"triage-bot@example.com"},{"id":"u-ngt","email":"nightly-bot@example.com"}]' >"$FX/${W}members_.json"
+  # LAB (no teams, no release step): same names, its own ids; approvers Sam + Riya + Omar (routing.yaml projects.LAB)
+  echo '{"results":[{"id":"n-in","name":"Inbox"},{"id":"n-td","name":"Todo"},{"id":"n-ir","name":"In Review"},{"id":"n-done","name":"Done"},{"id":"n-can","name":"Cancelled"}]}' >"$FX/${N}states_.json"
+  echo '{"results":[{"id":"nl-q","name":"question"}]}' >"$FX/${N}labels_.json"
+  labitems '{"id":"t1","state":"n-td","labels":[],"updated_at":"2026-10-18T10:00:00Z"}'
+  echo '[{"id":"u-sam","email":"Sam@Example.com"},{"id":"u-alex","email":"alex@example.com"},{"id":"u-noor","email":"noor@example.com"},{"id":"u-kenji","email":"kenji@example.com"},{"id":"u-riya","email":"riya@example.com"},{"id":"u-rel","email":"release-bot@example.com"},{"id":"u-tri","email":"triage-bot@example.com"},{"id":"u-ngt","email":"nightly-bot@example.com"}]' >"$FX/${W}members_.json"
   items '{"id":"i1","state":"s-td","labels":[],"updated_at":"2026-10-18T10:00:00Z"},{"id":"i2","state":"s-done","labels":[],"updated_at":"2026-10-19T13:00:00Z"}'
 }
 items() { echo "{\"results\":[$1],\"next_page_results\":false}" >"$FX/${P}work-items_.json"; }
@@ -75,6 +79,8 @@ prcitems() { echo "{\"results\":[$1],\"next_page_results\":false}" >"$FX/${D}wor
 prcacts() { echo "{\"results\":[$2],\"next_page_results\":false}" >"$FX/${D}work-items_$1_activities_.json"; }
 anlitems() { echo "{\"results\":[$1],\"next_page_results\":false}" >"$FX/${S}work-items_.json"; }
 anlacts() { echo "{\"results\":[$2],\"next_page_results\":false}" >"$FX/${S}work-items_$1_activities_.json"; }
+labitems() { echo "{\"results\":[$1],\"next_page_results\":false}" >"$FX/${N}work-items_.json"; }
+labacts() { echo "{\"results\":[$2],\"next_page_results\":false}" >"$FX/${N}work-items_$1_activities_.json"; }
 comments() { echo "{\"results\":[$2]}" >"$FX/${P}work-items_$1_comments_.json"; }
 removed() {  # removed <actor-json> <created_at>
   echo "{\"field\":\"labels\",\"verb\":\"updated\",\"old_value\":\"needs-approval\",\"new_value\":\"\",\"old_identifier\":\"l-na\",\"new_identifier\":null,\"actor\":$1,\"created_at\":\"$2\"}"
@@ -200,6 +206,27 @@ check 1 "ANL →Done by Kenji → idle (ANL approver)" "idle"
 reset; anlitems "{\"id\":\"k1\",\"state\":\"b-can\",\"labels\":[],\"updated_at\":\"$AFTER\"}"
 anlacts k1 "$(moved b-td Todo b-can Cancelled '"u-noor"' "$AFTER")"
 check 0 "ANL →Cancelled by a non-approver → work" "work: ANL: forbidden"
+# fourth board (LAB, a project without teams): Riya and Omar are approvers there, In Review → Done on merge
+reset; labitems '{"id":"t1","state":"n-in","labels":[],"updated_at":"2026-10-18T10:00:00Z"}'
+check 0 "LAB Inbox item → work (boards come from the config)" "work: LAB: 1 item(s) in Inbox"
+reset; labitems "{\"id\":\"t1\",\"state\":\"n-done\",\"labels\":[],\"updated_at\":\"$AFTER\"}"
+labacts t1 "$(moved n-ir "In Review" n-done Done '"u-riya"' "$AFTER")"
+check 1 "LAB In Review→Done by Riya → idle (LAB approver, no E2E step)" "idle"
+reset; labitems "{\"id\":\"t1\",\"state\":\"n-done\",\"labels\":[],\"updated_at\":\"$AFTER\"}"
+labacts t1 "$(moved n-ir "In Review" n-done Done '"u-ngt"' "$AFTER")"
+check 1 "LAB In Review→Done by the nightly bot (MR merged) → idle" "idle"
+reset; labitems "{\"id\":\"t1\",\"state\":\"n-done\",\"labels\":[],\"updated_at\":\"$AFTER\"}"
+labacts t1 "$(moved n-ir "In Review" n-done Done '"u-noor"' "$AFTER")"
+check 0 "LAB →Done by a non-approver → work" "work: LAB: forbidden"
+reset; items "{\"id\":\"i2\",\"state\":\"s-done\",\"labels\":[],\"updated_at\":\"$AFTER\"}"
+acts i2 "$(moved s-ir "In Review" s-done Done '"u-riya"' "$AFTER")"
+check 0 "BIL →Done by Riya → forbidden (a LAB approver only)" "work: BIL: forbidden"
+# a board set up only in routing.yaml (not in projects.yaml) is watched too
+awk '/^  [A-Z]+:/ { skip = ($1 == "LAB:") } /^[^ ]/ { skip = 0 } !skip' "$ROOT/projects.yaml" >"$T/cfg/projects.yaml"
+grep -q 'LAB' "$T/cfg/projects.yaml" && { echo "FAIL could not drop LAB from projects.yaml"; fail=1; }
+reset; labitems '{"id":"t1","state":"n-in","labels":[],"updated_at":"2026-10-18T10:00:00Z"}'
+check 0 "LAB only in routing.yaml → still watched" "work: LAB: 1 item(s) in Inbox"
+cp "$ROOT/projects.yaml" "$T/cfg/projects.yaml"
 reset; items "{\"id\":\"i2\",\"state\":\"s-done\",\"labels\":[],\"updated_at\":\"$AFTER\"}"
 acts i2 "$(moved s-ir "In Review" s-done Done '"u-kenji"' "$AFTER")"
 check 0 "BIL →Done by Kenji → still forbidden (approvers are per project)" "work: BIL: forbidden"

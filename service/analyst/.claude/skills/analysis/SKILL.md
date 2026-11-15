@@ -149,6 +149,22 @@ with a verdict per claim.
 - Run it once per analysis. If it fails or returns no JSON, say so in that line
   (`Fresh check: not run (<why>)`): never write "checked" when it didn't run.
 
+## Projects without teams (`team_labels: false`)
+
+On an item of a project without teams (routing.yaml `projects.<KEY>.team_labels: false`; the people
+who build it direct an AI agent and need more explanation), in addition to the analysis:
+- **Update the item's `## Plain-language brief`** (format in `task-protocol`, "Projects without
+  teams"; triage wrote the first version) from what you found: the exact files and functions, a
+  step-by-step plan an agent can follow and a person can check, how to check it works (commands and
+  local pages), and what could break.
+- **Name the repo rules that apply:** the part of the repo's rules file (and the module or domain
+  doc it points to) that owns the code, the gates the change must pass (the script its CI runs), and
+  a versioned API contract when an API another repo uses changes. In a UI repo, the decisions-log
+  entries and spec sections that cover the page, and the components to reuse.
+- **Fix options in plain words:** for each option, what it changes for users, how big it is, and
+  its risk; mark the one you recommend.
+- No team labels and no assignee, as on the rest of that board.
+
 ## 6. Write the analysis
 
 Add the section to the description HTML (read `description_html` first and keep everything else

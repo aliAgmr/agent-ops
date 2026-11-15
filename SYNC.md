@@ -40,6 +40,9 @@ If you run your own fork, you can keep a file like this to track what you change
 | `infra/bin/post-commit-status.py` | `infra/bin/post-commit-status.sh` | Through the code-host adapter |
 | `infra/bin/render-mcp.py`, `service/*/mcp.template.json` | Committed `service/*/.mcp.json` | Edit the template, not a rendered file |
 | `plugins/{gitlab,github,postgres,clickhouse,jenkins,figma,metabase}-tools` | MCP servers inside the role plugins | Server changes go to the tool plugin |
+| `plugins/role-vibecoder/**` (skills only: merge requests through `gitlab-tools`/`github-tools`, designs through `figma-tools`; "the repo's own rules file", "the project's gates") | A vibecoder role plugin with its own code-host and Figma servers and one project's repo rules, commands and locale checks | Port the skills generically; never the project's repo names, rules files, commands or hosts |
+| `routing.yaml` example project `LAB` (`team_labels: false`, `assign: none`, `explain: detailed`, `reporters`, `merge_to_main`) | The team's own project without teams | Port the keys and the behaviour, never the project |
+| `infra/plane/configure.sh` (`team_labels` read from routing.yaml; `PLANE_TEAM_LABELS=false` overrides) | `PLANE_TEAM_LABELS=false` on the command line | Same switch; here it also comes from the config |
 | `knowledge/jenkins-owners.yaml` (example rules for the example team) | The team's job-name → project/owner rules | Port the format, never the rules |
 | `infra/quality/mr_scan.py` (diff through `CodeHostAdapter.merge_request_diffs`) | Reads the MR diff from the GitLab API directly | Port the scan; fetch through the adapter |
 | `knowledge/contract-patterns.yaml` (example for a TypeScript HTTP backend) | Patterns for the team's own backend | Port the format and new kinds, never the team's patterns |

@@ -76,6 +76,11 @@
       "name": "role-devops",
       "source": "./plugins/role-devops",
       "description": "CI/CD pipelines, deployment setup, servers and containers, monitoring and alerts. May run non-production pipelines and CI jobs (core role must be devops); never production deploys, merges to main or database writes."
+    },
+    {
+      "name": "role-vibecoder",
+      "source": "./plugins/role-vibecoder",
+      "description": "Vibe coders on a project without teams: plan in plain words, change safely on a branch, check it works, explain it in the merge request."
     }
   ]
 }

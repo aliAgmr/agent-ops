@@ -10,7 +10,8 @@ between people and agents. Every piece of work has a work item; every agent acti
 comment. Talk to other agents through work items and comments, never directly.
 
 Use the `plane` MCP server (or your tracker's MCP server). The workspace and projects are the ones
-in `projects.yaml` (in the examples: **BIL** Acme Billing, **PRC** Acme Pricing, **ANL** Acme Analytics).
+in `projects.yaml` (in the examples: **BIL** Acme Billing, **PRC** Acme Pricing, **ANL** Acme Analytics,
+**LAB** Acme Labs, a project without teams).
 
 People below are named by what they do; `routing.yaml` says who that is on your team:
 **approvers** (`approvers`, e.g. Sam and Alex), the **question owner** (`question_owner`, e.g. Alex),
@@ -41,9 +42,40 @@ Rules:
   agent or the nightly agent, or `In Review` → `Ready for E2E` / → `Cancelled` by anyone but an
   approver, is **reverted automatically** (moved back to the previous state, with a comment).
 
+## Projects without teams
+
+Some projects have no teams: a few people build the whole thing, each directing an AI agent (core
+role `vibecoder`, or their own role plus the `role-vibecoder` plugin). routing.yaml marks such a
+project (`projects.<KEY>`, e.g. `LAB` in the examples) with `team_labels: false`, `assign: none` and
+`explain: detailed`:
+- **No `team:*` labels, no assignee from agents.** Items stay unassigned in `Todo`; one of the
+  project's people picks an item by assigning themselves. People in `reporters` are on the board to
+  follow it only: never assign them and never send them questions (questions go to the project's
+  `question_owner`).
+- **Every item carries a `## Plain-language brief`** (triage writes it, the analyst deepens it),
+  written for someone who directs an AI agent rather than reads code all day:
+
+```
+## Plain-language brief  ([agent:triage] <date>)
+**What this means:** <the change in product terms: who sees what, before → after>
+**Where it lives:** <repo(s); the files with paths and what each does, e.g.
+  `labs-api: src/routes/orders.ts` (the order endpoints), `labs-web: src/pages/orders/list.tsx` (the list page)>
+**Plan, step by step:** 1. … 2. … (small steps an agent can do and a person can check)
+**How to check it works:** <the command to run, the page to open (local URL), what to click, what you should see>
+**What could break:** <other pages or endpoints that use the same code, money or permission paths, data>
+**Rules of the repo:** <what the repo's own rules file (`CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md`, a decisions log)
+  asks for this change, and the checks it must pass before the MR>
+**Words used:** <any term above a newcomer may not know, one line each>
+```
+- **Flow:** a branch per task and a merge request into `main` (protected; one of the project's
+  `merge_to_main` people merges it, never an agent). When the project's repos have no release step
+  (`release: false`), there is no `dev` branch and no `Ready for E2E`: `In Review` → `Done` once the
+  MR is merged (by an approver or the nightly agent).
+
 ## Labels
 
-- Team (exactly one per work item): `team:product`, `team:design`, `team:backend`, `team:frontend`, `team:data`, `team:devops`
+- Team (exactly one per work item): `team:product`, `team:design`, `team:backend`, `team:frontend`, `team:data`, `team:devops`.
+  None on a project without teams (see "Projects without teams")
 - Flow: `question` (a question for the question owner), `e2e:red`, `e2e:green`, `source:agent`, `source:human`,
   `out-of-scope` (a declined request with a `[decision]` comment, see "Declining a request")
 - Effort (at most one per work item, set by the triage agent): `effort:xs` (under 2 hours),

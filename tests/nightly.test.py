@@ -49,6 +49,8 @@ default = collect.default_project(real_routing)
 real = collect.repos_by_project(real_routing, default)
 ok(default == "BIL" and len(real["BIL"]) >= 2 and len(real["PRC"]) >= 2, "the example routing.yaml: default project and repos", (default, real))
 ok([(x["path"], x["team"]) for x in real.get("ANL", [])] == [("acme/warehouse", "data")], "ANL: the warehouse repo, as data team", real.get("ANL"))
+ok([x["path"] for x in real.get("LAB", [])] == ["acme/labs-api", "acme/labs-web"],
+   "LAB (a project without teams): its repos, listed under its pseudo-team", real.get("LAB"))
 ok(collect.default_project({"default_project": "prc"}) == "PRC", "routing.yaml default_project wins")
 ok("ANL" in collect.repos_by_project({"projects": {"ANL": {"teams": {"product": {"people": ["sam"]}}}}}, "BIL"),
    "a project with no repos still gets an entry (its board)")
