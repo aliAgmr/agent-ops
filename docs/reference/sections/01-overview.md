@@ -48,7 +48,8 @@ It gives every agent:
 the task protocol, scope guard, hand-off, lessons, blame-and-revert and data-query skills; the
 task-board MCP server; the agent-mcp client; the guard, journal and session-notes hooks. One
 `role-*` plugin per role adds that role's skills and tools: `role-product`, `role-design`,
-`role-backend`, `role-frontend`, `role-data`, `role-devops`. `metabase-tools` is a vendored
+`role-backend`, `role-frontend`, `role-data`, `role-devops`, and `role-vibecoder` for people who
+build a project without teams with an AI agent. `metabase-tools` is a vendored
 Metabase MCP server. Details: section 02.
 
 ### Clients
@@ -229,6 +230,19 @@ rephrase, rename or split the call to get around it.
 | frontend | the frontend repos | designs, backend routes and API docs, the board | backend repo, databases, CI |
 | data | the data repo, BI questions, warehouse SQL as files | warehouse, BI, CI logs | backend and frontend repos |
 | devops | CI/CD config, Dockerfiles, deploy scripts, alert rules (as merge requests); dev/stage pipeline and job runs | pipelines, CI logs, servers, monitoring | application code, databases, anything production |
+| vibecoder | the repos of a project without teams, on a branch per task with a merge request into `main` | the board, designs, the project's live app and API | production servers and databases, deploy keys and CI secrets, other projects' repos |
+
+### Projects without teams
+
+A project in `routing.yaml` may have no teams: a few people build all of it, each directing an AI
+agent (core role `vibecoder`, or their own role plus the `role-vibecoder` plugin). It sets
+`team_labels: false` (no `team:*` labels; `configure.sh` creates none), `assign: none` (triage
+leaves items unassigned and people pick them), `explain: detailed` (triage writes a
+"Plain-language brief" on every item and the analyst deepens it; format in `task-protocol`),
+`reporters` (on the board to follow it, never assigned or asked) and its own `approvers`,
+`question_owner` and `merge_to_main`. Its repos usually have `release: false`: there is no
+`Ready for E2E`, and an item goes `In Review` → `Done` when its merge request into `main` is merged.
+The example is `LAB` (Acme Labs).
 
 ## The life of a task
 

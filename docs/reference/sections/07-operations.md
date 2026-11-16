@@ -152,7 +152,9 @@ Each prints `ok` or `FAIL` per check and exits non-zero on any failure.
 
 1. A board project with the same states and labels (`configure.sh`).
 2. `projects.yaml` (its `tracker_project_id`, repos, data sources) and `routing.yaml` (`projects:`
-   overrides).
+   overrides). A project without teams sets `team_labels: false`, `assign: none`, `explain: detailed`
+   and its own `approvers`, `question_owner`, `reporters` and `merge_to_main` (the example `LAB`).
+   Add its repos to `infra/nightly/checks.yaml` too.
 3. Clone its repos on the host (`repo-sync.sh`), and add their code-host tokens if it's a new host.
 
 ## Adding a service agent

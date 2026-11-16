@@ -37,3 +37,13 @@ projects:
       - name: warehouse
         path: /srv/repos/warehouse
     data_sources: [tracker, code-host, clickhouse, metabase, jenkins]
+  LAB:
+    name: Acme Labs
+    tracker_project_id: 00000000-0000-4000-8000-000000000004
+    description: Acme Labs – prototypes its people build with AI agents (no teams); labs-api is the HTTP API, labs-web the web app that uses it.
+    repos:
+      - name: labs-api
+        path: /srv/repos/labs-api
+      - name: labs-web
+        path: /srv/repos/labs-web
+    data_sources: [tracker, code-host]

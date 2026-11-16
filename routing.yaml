@@ -83,6 +83,26 @@ projects:
           - host: oss
             path: acme/warehouse
             default_branch: main
+  LAB:                           # Acme Labs (a project without teams: its people build it with AI agents)
+    team_labels: false           # no team:* labels and no routing by team
+    assign: none                 # triage leaves items unassigned; people pick their own tasks
+    explain: detailed            # triage and the analyst add a "Plain-language brief" to every item
+    approvers: [sam, riya, omar]
+    question_owner: sam
+    reporters: [alex]            # on the board to follow it; never assigned, never asked
+    merge_to_main: [sam, riya, omar]   # any of them merges MRs into the protected main
+    teams:
+      vibe:                      # not a team: lists the project's people and repos (no label, no routing)
+        people: [sam, riya, omar]
+        repos:
+          - host: main
+            path: acme/labs-api
+            default_branch: main
+            release: false       # no dev→main release flow: MRs go straight into main
+          - host: main
+            path: acme/labs-web
+            default_branch: main
+            release: false
 
 approvers: [sam, alex]           # may change priority; review rules (In Review → Ready for E2E, Done, Cancelled)
 question_owner: alex             # triage questions go to this person (a project may set its own)

@@ -6,7 +6,7 @@ import shutil
 import sys
 from pathlib import Path
 
-ROLES = ("product", "design", "backend", "frontend", "data", "devops")
+ROLES = ("product", "design", "backend", "frontend", "data", "devops", "vibecoder")
 CLIENTS = ("cursor", "codex", "kimi")
 SECRET_SERVICE = "agent-ops"
 WINDOWS = os.name == "nt"

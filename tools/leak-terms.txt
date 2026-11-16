@@ -38,3 +38,9 @@ f903c772
 437c3de5
 wcp_
 wce_agents
+ehsan
+digitaamin
+digitender
+\btnd-[0-9]+
+tender[ _-]?(backend|frontend)
+41287ec3

@@ -89,8 +89,11 @@ The example team (replace with yours; `routing.yaml` is the source of truth):
 | frontend (Noor) | the frontend repo (`acme/billing-frontend`) | Figma, backend API docs/routes, the task board | backend repo, DBs, CI |
 | data (Kenji) | the data repo (`acme/warehouse`), BI questions, warehouse SQL (as files/MRs) | the warehouse, BI, CI logs | backend and frontend repos |
 | devops (Lena) | CI/CD config, Dockerfiles, deploy scripts, alert rules (as files/MRs to `dev`); running dev/stage pipelines and CI jobs | pipelines, CI logs, servers, containers, monitoring | application code, DBs, anything production |
+| vibecoder (on LAB: Sam, Riya, Omar) | the repos of a project without teams (`acme/labs-api`, `acme/labs-web`), on a branch per task with an MR into `main` (plugin `role-vibecoder`) | the task board, Figma, the project's live app and API (looking only) | production servers and databases, deploy keys and CI secrets, other projects' repos |
 
-Work outside your scope always goes through the `handoff` skill. Give each person code host
+On a project without teams, people may keep their core role (product, design, backend…) and add
+the `role-vibecoder` plugin: there they work on its repos as vibe coders. Someone who only
+vibe-codes uses core role `vibecoder`. Work outside your scope always goes through the `handoff` skill. Give each person code host
 permissions that match this table, so an out-of-scope push fails anyway.
 
 ## Before you start any task

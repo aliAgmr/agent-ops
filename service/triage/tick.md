@@ -6,6 +6,9 @@ of them. States and labels have the same names on every board but different ids:
 project, and keep every update, child, question item and comment in the item's own project.
 (infra/bin/precheck.py checks the same boards.) A project may have its own approvers and question
 owner: routing.yaml `projects.<KEY>.approvers` / `question_owner` win over the top-level ones.
+A project without teams (`team_labels: false`, `assign: none`, `explain: detailed`) gets no team
+labels and no assignee, and every item gets a plain-language brief ("Projects without teams" in the
+`triage` skill).
 
 1. List work items with state `Inbox` on every board, oldest first (across all). Also list items in
    state `Backlog` with label `backlog:to-review` (step 2b).

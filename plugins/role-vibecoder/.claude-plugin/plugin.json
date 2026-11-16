@@ -1,0 +1,12 @@
+{
+  "name": "role-vibecoder",
+  "displayName": "Role: Vibe coder",
+  "version": "0.1.0",
+  "description": "Build and change a project without teams safely with an AI agent: understand the task, plan it in plain words, make the smallest complete change on a branch, check it really works, and explain it in the merge request.",
+  "author": {
+    "name": "agent-ops contributors"
+  },
+  "dependencies": [
+    "core"
+  ]
+}

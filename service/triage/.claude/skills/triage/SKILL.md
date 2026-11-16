@@ -10,8 +10,9 @@ The item is on one of the boards in `projects.yaml` (the example team has **Acme
 ids differ, so look up state and label ids in the item's own project. Teams can differ per project:
 the default project uses routing.yaml `teams`; another project uses `projects.<KEY>.teams` (a team
 missing there doesn't exist in that project; a team may list several people). A project may also
-set its own `approvers` and `question_owner`. Everything you create (children, question items,
-relations) goes into the item's own project.
+set its own `approvers` and `question_owner`. A project with `team_labels: false` has no teams at
+all: "Projects without teams" below replaces step 4 there. Everything you create (children,
+question items, relations) goes into the item's own project.
 
 ## 0. Lessons and directives (labels `lesson`, `directive`)
 
@@ -116,6 +117,27 @@ kept by triage) — …` instead.
   `list` to confirm; see "Relations" in `task-protocol`). Give each child its own triage notes.
 - Unclear between two teams → pick the one that owns the **source of truth** (data before
   backend before frontend), and mention the alternative in the notes.
+
+## Projects without teams (`team_labels: false`)
+
+routing.yaml `projects.<KEY>` may set `team_labels: false`, `assign: none` and `explain: detailed`
+(the example: `LAB`). Its people build everything with AI agents (`role-vibecoder`). On such an item:
+- **Steps 1–3 as usual**, in the clones of the project's repos (`/srv/repos/<repo-name>`; routing.yaml
+  lists them under its pseudo-team). Read each repo's rules file (`CLAUDE.md`, `AGENTS.md`,
+  `CONTRIBUTING.md`), README and any decisions log or spec first. Notes: write `Repos:` instead of
+  `Teams:` (which repo(s) the work touches, in order).
+- **Instead of step 4:** no `team:*` label and **no assignee**. Leave the item unassigned in `Todo`
+  (one of the project's people picks it). Never assign or ask anyone in `reporters`. Split only when
+  the work is really two tasks (e.g. an API change and the page that uses it): one child per repo,
+  linked with `blocked by` in work order, each with its own brief; no team labels.
+- **Add the `## Plain-language brief`** (format in `task-protocol`, "Projects without teams") above
+  the triage notes, and keep it truthful: name only files you opened, commands that exist in the
+  repo (`package.json` scripts, `scripts/`), local URLs the README gives. Explain more than on other
+  boards; avoid jargon or explain it under "Words used".
+- **Questions** go to the project's `question_owner`, as a question item in its own board.
+- **Money, permissions and personal data:** when the task touches those paths, say so in "What
+  could break" and set at least effort `m`.
+- Step 7's comment says `left unassigned for the project's people` instead of `routed to <team(s)>`.
 
 ## 5. Priority
 
@@ -266,6 +288,8 @@ Children before their parent when both are missing. Change nothing else.
 
 Most task boards can't restrict who changes a state, so triage enforces it, on every board. The
 project's approvers review every task: routing.yaml `approvers` (or `projects.<KEY>.approvers`).
+A project whose repos have no release step (`release: false`, e.g. a project without teams) has no
+`Ready for E2E`: there `In Review` → `Done` follows the merge, by an approver or the nightly agent.
 
 | Move | Allowed only for |
 |---|---|

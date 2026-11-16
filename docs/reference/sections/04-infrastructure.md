@@ -180,7 +180,9 @@ the updates `telegram-chat-ids.sh` also reads: stop it while you run that script
 
 Optional, if you don't use Plane Cloud: `install-*.sh` runs a pinned Plane Community Edition in
 Docker; `configure.sh` (idempotent, never deletes) creates the states, labels and members of each
-project from `routing.yaml`; `subpath/` serves Plane under a path prefix behind a proxy; `bi/`
+project from `routing.yaml` (a project's members include its approvers, question owner, `reporters`
+and `merge_to_main`; a project with `team_labels: false`, or `PLANE_TEAM_LABELS=false`, gets no
+`team:*` labels); `subpath/` serves Plane under a path prefix behind a proxy; `bi/`
 exposes the board to a BI tool through a read-only database user.
 
 ## Other host scripts (`infra/bin/`)

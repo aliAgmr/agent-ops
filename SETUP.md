@@ -27,7 +27,9 @@ Save the answers to `setup.answers.yaml` in the repo root (git-ignored) as you g
 
 **A. Team.** For each person:
 - a short key (e.g. `alex`) and full name;
-- role: `product`, `design`, `backend`, `frontend`, `data` or `devops`;
+- role: `product`, `design`, `backend`, `frontend`, `data`, `devops` or `vibecoder` (someone who
+  builds a project without teams with an AI agent; people with another role who also do that keep
+  it and add the `role-vibecoder` plugin);
 - email (only to match them on the task board);
 - which AI tool(s) they use: Claude Code, Cursor, Codex or Kimi;
 - their OS: macOS, Linux or Windows.
@@ -44,6 +46,12 @@ description. Per team in the project, the owner(s), and for each repo:
 - the default branch;
 - whether it uses a dev → main release flow;
 - for a shared repo, the folder (`only:`) that belongs to the project.
+
+A project may have **no teams** (a few people build all of it with AI agents). Then ask instead:
+its people and repos (listed under one pseudo-team, e.g. `vibe`), its approvers, question owner and
+who merges to its `main`, and who only follows the board (`reporters`). Write it with
+`team_labels: false`, `assign: none` and `explain: detailed` (the example is `LAB` in
+`routing.yaml`).
 
 **C. Task board.**
 - Plane: cloud, or self-hosted on the agent host? The default is to use an existing Plane, and
@@ -209,7 +217,9 @@ on their machine.
 /plugin install role-<their role>@agent-ops
 /plugin install <tool plugins they need, e.g. gitlab-tools@agent-ops, clickhouse-tools@agent-ops>
 ```
-Claude Code asks for each plugin's settings and keeps the secrets in the OS keychain:
+People who also work on a project without teams add `/plugin install role-vibecoder@agent-ops`
+(or `--role vibecoder` below when that is all they do). Claude Code asks for each plugin's settings
+and keeps the secrets in the OS keychain:
 - `tracker_api_key` (their own task-board token);
 - `tracker_base_url`, `tracker_workspace_slug`;
 - `agent_mcp_url`, `role`.

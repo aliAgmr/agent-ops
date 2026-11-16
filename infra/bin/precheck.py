@@ -11,7 +11,8 @@ stop the agents). nightly is always work: nightly.sh schedules it. jenkins-watch
 infra/jenkins-watch/watch.py collect (Jenkins through its MCP server, read-only; same exit codes).
 
 The conditions mirror each agent's tick.md; keep them in sync when a tick changes.
-Boards: TRIAGE_PROJECTS (space-separated keys), else every key in projects.yaml.
+Boards: TRIAGE_PROJECTS (space-separated keys), else every key in projects.yaml plus every
+routing.yaml project (see boards()).
 PRECHECK_RULES_SINCE (optional ISO time): state changes before it never count for the review rules
 (set it once when you roll the rules out on a board with history).
 """
@@ -214,9 +215,20 @@ def check_board(b: Board, agent: str) -> None:
 
 
 def boards() -> List[str]:
+    """The boards triage watches, from the config: every key in projects.yaml, then the default
+    project (routing.yaml `default_project`) and every routing.yaml `projects` key not listed there
+    yet (a project set up only in routing.yaml, e.g. one without teams, is watched too)."""
     if os.environ.get("TRIAGE_PROJECTS"):
         return os.environ["TRIAGE_PROJECTS"].split()
-    return list(A.load_projects().keys()) or ["BIL"]
+    routing = A.load_routing()
+    keys = [str(k) for k in A.load_projects()]
+    if routing.get("default_project"):
+        keys.append(str(routing["default_project"]))
+    keys += [str(k) for k in (routing.get("projects") or {})]
+    out = list(dict.fromkeys(k.upper() for k in keys if k))
+    if not out:
+        fail("no boards: projects.yaml and routing.yaml list no projects (or set TRIAGE_PROJECTS)")
+    return out
 
 
 def main(argv: List[str]) -> int:
