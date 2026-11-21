@@ -14,6 +14,7 @@
       "mcp__gitlab__download_job_artifacts",
       "mcp__gitlab__get_job_artifact_file",
       "mcp__gitlab__create_merge_request_note",
+      "mcp__gitlab__create_merge_request_thread",
       "mcp__github__get_*",
       "mcp__github__list_*",
       "mcp__github__search_*",

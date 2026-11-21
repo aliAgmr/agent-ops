@@ -99,10 +99,33 @@ if [ "$BUDGET" != off ]; then
 fi
 
 if [ "${AGENT_GIT_PULL:-on}" != off ]; then
-  git -C "$ROOT" pull -q --ff-only || echo "$(ts) agent-ops pull failed, running last version" >&2
-  if [ "$AGENT" = "triage" ] || [ "$AGENT" = "analyst" ] || [ "$AGENT" = "nightly" ] || [ "$AGENT" = "jenkins-watch" ]; then
-    # From GitLab with the agents' read-only tokens (repo-sync.sh); a failed pull keeps the last copy.
-    bash "$ROOT/infra/bin/repo-sync.sh" pull "$REPOS_DIR"/*/ || echo "$(ts) repo pull failed for some of $REPOS_DIR, running on the last copy" >&2
+  # One pull at a time across agents: triage, analyst and release start on the same minute (5, 10
+  # and 15-minute intervals), and two git pulls in one checkout at once trip over FETCH_HEAD
+  # ("Cannot fast-forward to multiple branches") or a ref lock. Same pid-directory lock as above;
+  # wait up to AGENT_PULL_WAIT_S for the other agent's pull, then run on the last copy.
+  PULL_LOCK="${AGENT_LOCK_DIR:-$default_locks}/agent-git-pull.lock"
+  waited=0; have_pull_lock=0
+  while [ "$waited" -lt "${AGENT_PULL_WAIT_S:-180}" ]; do
+    if mkdir "$PULL_LOCK" 2>/dev/null; then have_pull_lock=1; break; fi
+    if ! kill -0 "$(cat "$PULL_LOCK/pid" 2>/dev/null || echo 0)" 2>/dev/null; then
+      # empty or dead-owner lock: give a just-started holder a moment to write its pid
+      sleep 1; kill -0 "$(cat "$PULL_LOCK/pid" 2>/dev/null || echo 0)" 2>/dev/null || rm -rf "$PULL_LOCK"
+      continue
+    fi
+    sleep 2; waited=$((waited + 2))
+  done
+  if [ "$have_pull_lock" = 1 ]; then
+    echo $$ > "$PULL_LOCK/pid"
+    trap 'rm -rf "$LOCK"; [ "$(cat "$PULL_LOCK/pid" 2>/dev/null)" = "$$" ] && rm -rf "$PULL_LOCK"; true' EXIT
+    git -C "$ROOT" pull -q --ff-only || echo "$(ts) agent-ops pull failed, running last version" >&2
+    if [ "$AGENT" = "triage" ] || [ "$AGENT" = "analyst" ] || [ "$AGENT" = "nightly" ] || [ "$AGENT" = "jenkins-watch" ]; then
+      # From GitLab with the agents' read-only tokens (repo-sync.sh); a failed pull keeps the last copy.
+      bash "$ROOT/infra/bin/repo-sync.sh" pull "$REPOS_DIR"/*/ || echo "$(ts) repo pull failed for some of $REPOS_DIR, running on the last copy" >&2
+    fi
+    rm -rf "$PULL_LOCK"
+    trap 'rm -rf "$LOCK"' EXIT
+  else
+    echo "$(ts) another agent's pull took over ${AGENT_PULL_WAIT_S:-180}s, running last version" >&2
   fi
 fi
 
