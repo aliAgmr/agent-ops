@@ -44,7 +44,11 @@ same rights it made them with.
 7. **Budget gate.** The API-price cost of all service-agent runs in the last 5 hours, summed from
    the run logs (a login token can't read the plan's usage). Over `AGENT_BUDGET_5H_USD` → skip and
    alert once per 5 hours. `off` disables it.
-8. **Pulls.** `git pull --ff-only` on agent-ops itself; for triage, analyst, nightly and jenkins-watch also
+8. **Pulls.** One agent at a time: the pull holds a shared lock (`agent-git-pull.lock`, a
+   pid directory); another agent waits up to `AGENT_PULL_WAIT_S` (180 s), then runs on the last
+   copy, and a lock whose pid is gone is taken over. Agents on 5, 10 and 15-minute intervals start
+   on the same minute, and two `git pull`s in one checkout at once fail ("Cannot fast-forward to
+   multiple branches", ref locks). Then `git pull --ff-only` on agent-ops itself; for triage, analyst, nightly and jenkins-watch also
    `infra/bin/repo-sync.sh pull /srv/repos/*/`, which fetches each read-only clone from its code host
    with the agents' read-only token passed as an HTTP header through `GIT_CONFIG_*` variables, never
    on a command line or in a config file. It fast-forwards each clone; when upstream history was
@@ -346,7 +350,7 @@ headless agent investigates and answers in English with sources. It explains; it
 | triage → question owner | a `Question:` item; the answer sends the original back |
 | triage → a team | team label, assignee, `Todo` |
 | agent → another team | `handoff`: a new `Inbox` item + "blocked by" |
-| release → people | commit status, a merge request comment, `e2e:green`/`e2e:red` |
+| release → people | commit status, a merge request comment (GitLab: `create_merge_request_thread`, the one comment tool in the GitLab MCP's default core set; `create_merge_request_note` is allowed too), `e2e:green`/`e2e:red` |
 | nightly → people | `Findings` items, the report, private messages |
 | jenkins-watch → people | one summary per change in the team's Telegram topic, owners mentioned, replies to CI alerts |
 | anyone → anyone's agent | agent-mcp `ask`, `send_message` |

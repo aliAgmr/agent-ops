@@ -187,4 +187,17 @@ check "failed pull: tick still runs" '[ "$(calls)" = 1 ] && grep -q -- "-C $T/re
 reset; pull_run release
 check "release doesn't pull the repo clones" '! grep -q "$T/repos" "$T/git-argv" && [ "$(calls)" = 1 ]'
 
+# 10. one pull at a time across agents (they start on the same minute; two pulls in one checkout
+# collide on FETCH_HEAD): the pull lock is released after the pull, a dead owner's lock is taken
+# over, and a live owner is waited for up to AGENT_PULL_WAIT_S, then the tick runs on the last copy
+PL="$T/locks/agent-git-pull.lock"
+reset; rm -rf "$PL"; pull_run triage
+check "pull lock: pulled, then released" 'grep -q -- "-C $ROOT pull -q --ff-only" "$T/git-argv" && [ ! -d "$PL" ]'
+reset; rm -rf "$PL"; mkdir "$PL"; echo 999999 > "$PL/pid"; pull_run triage
+check "pull lock: a dead owner's lock is taken over" 'grep -q -- "-C $ROOT pull -q --ff-only" "$T/git-argv" && [ ! -d "$PL" ] && [ "$(calls)" = 1 ]'
+sleep 30 & holder=$!
+reset; rm -rf "$PL"; mkdir "$PL"; echo "$holder" > "$PL/pid"; AGENT_PULL_WAIT_S=2 pull_run analyst
+check "pull lock: a live owner is waited for, then the tick runs without pulling" '[ ! -s "$T/git-argv" ] && [ "$(calls)" = 1 ] && [ "$(cat "$PL/pid")" = "$holder" ]'
+kill "$holder" 2>/dev/null; wait "$holder" 2>/dev/null; rm -rf "$PL"
+
 exit "$fail"
